@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>HR System Portfolio</title>
+    <script>
+      // GitHub Pages SPA redirect: store path and redirect to root
+      var path = window.location.pathname;
+      var base = '/HR-System-Portfolio';
+      var rest = path.replace(base, '') || '/';
+      sessionStorage.setItem('spa-redirect', rest + window.location.search);
+      window.location.replace(base + '/');
+    </script>
+  </head>
+  <body></body>
+</html>

@@ -1,0 +1,33 @@
+node_modules/
+dist/
+frontend/.vite/
+.env
+.env.production
+*.local
+.DS_Store
+frontend.zip
+
+# Claude Code dev tooling
+.agents/
+skills-lock.json
+.claude/
+
+# AWS Elastic Beanstalk (server-specific, not portfolio)
+.ebextensions/
+
+# Backend data files (large/internal - not needed for portfolio code review)
+backend/data/
+
+# Translation/misc files not part of portfolio
+translation/
+translator_baseball_table_added.html
+명령어.txt
+docs/
+
+# WordPress export (100MB+ — GitHub 제한)
+designmax.WordPress.*.xml
+
+# Deployment artifacts / server config
+.htaccess
+fonts/
+nanoimg/

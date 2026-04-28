@@ -1,0 +1,246 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pretendard JP - 일본어 전용 폰트 */
+@font-face {
+  font-family: 'Pretendard JP';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-Regular.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Pretendard JP';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/PretendardJP-Bold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Pretendard JP';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/PretendardJPVariable.ttf') format('truetype');
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* 일본어 선택 시 Pretendard JP 적용 */
+html[lang='ja'] {
+  font-family: 'Pretendard JP', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* react-datepicker + Tailwind 호환 - 달력 레이아웃 복구 */
+.react-datepicker-popper {
+  z-index: 9999 !important; /* 모달(z-50) 위에 표시 */
+}
+.react-datepicker__day-names,
+.react-datepicker__week {
+  display: flex !important;
+  flex-direction: row !important;
+  white-space: nowrap !important;
+}
+.react-datepicker__day-names {
+  display: flex !important;
+}
+.react-datepicker__month-container {
+  float: left !important;
+}
+.react-datepicker__day-name,
+.react-datepicker__day,
+.react-datepicker__time-name {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 1.7rem !important;
+  line-height: 1.7rem !important;
+  margin: 0.166rem !important;
+  flex-shrink: 0 !important;
+}
+
+/* 구글 캘린더 스타일 */
+.holiday-calendar-google {
+  font-family: 'Google Sans', 'Roboto', system-ui, sans-serif !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px 1px rgba(60, 64, 67, 0.15), 0 1px 2px 0 rgba(60, 64, 67, 0.3) !important;
+  border: 1px solid #dadce0 !important;
+  padding: 12px !important;
+  background: #fff !important;
+}
+.holiday-calendar-google .react-datepicker__header {
+  background: transparent !important;
+  border: none !important;
+  padding-bottom: 8px !important;
+}
+.holiday-calendar-google .react-datepicker__current-month {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #3c4043 !important;
+  margin-bottom: 12px !important;
+}
+.holiday-calendar-google .react-datepicker__day-name {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #5f6368 !important;
+  width: 2.25rem !important;
+  line-height: 2.25rem !important;
+}
+.holiday-calendar-google .react-datepicker__day {
+  width: 2.25rem !important;
+  line-height: 2.25rem !important;
+  font-size: 12px !important;
+  border-radius: 50% !important;
+  margin: 2px !important;
+}
+.holiday-calendar-google .react-datepicker__day:hover {
+  background: #e8eaed !important;
+  color: inherit !important;
+}
+.holiday-calendar-google .react-datepicker__day--selected,
+.holiday-calendar-google .react-datepicker__day--keyboard-selected {
+  background: #1a73e8 !important;
+  color: #fff !important;
+}
+.holiday-calendar-google .react-datepicker__day--today:not(.react-datepicker__day--selected) {
+  font-weight: 700 !important;
+  color: #1a73e8 !important;
+}
+.holiday-calendar-google .react-datepicker__navigation {
+  top: 10px !important;
+}
+.holiday-calendar-google .react-datepicker__day--red {
+  color: #d93025 !important;
+  font-weight: 600 !important;
+}
+.holiday-calendar-google .react-datepicker__day--red:hover {
+  background: #fce8e6 !important;
+  color: #d93025 !important;
+}
+
+/* 공휴일 날짜에 공휴일명 표시용 셀 확장 */
+.holiday-calendar-google .react-datepicker__day {
+  min-height: 2.75rem !important;
+  padding: 2px 0 !important;
+}
+
+/* 모바일: 터치 영역 확대 (인라인 캘린더용) */
+@media (max-width: 639px) {
+  .holiday-calendar-mobile .react-datepicker__day,
+  .holiday-calendar-mobile .react-datepicker__day-name {
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+    line-height: 2.75rem !important;
+    min-height: 2.75rem !important;
+    font-size: 14px !important;
+  }
+  .holiday-calendar-mobile .react-datepicker__day {
+    margin: 3px !important;
+  }
+}
+
+/* 모달 내 캘린더: max-w-md에 맞게 공간 채우기 (compact) */
+.holiday-calendar-compact {
+  padding: 4px 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+.holiday-calendar-compact .react-datepicker__month-container,
+.holiday-calendar-compact .react-datepicker__week {
+  width: 100% !important;
+}
+.holiday-calendar-compact .react-datepicker__current-month {
+  font-size: 13px !important;
+  margin-bottom: 8px !important;
+}
+.holiday-calendar-compact .react-datepicker__day-name,
+.holiday-calendar-compact .react-datepicker__day {
+  flex: 1 !important;
+  min-width: 0 !important;
+  line-height: 2rem !important;
+  min-height: 2rem !important;
+  font-size: 12px !important;
+  margin: 0 1px !important;
+}
+.holiday-calendar-compact .react-datepicker__day-name {
+  font-size: 10px !important;
+}
+.holiday-calendar-compact .react-datepicker__header {
+  padding-bottom: 4px !important;
+}
+/* 모바일: 월이 이미 분리되어 있으므로 이전/다음 달 공백 셀 숨김 */
+.holiday-calendar-compact .react-datepicker__day--outside-month {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* 범위 선택: 시작일~종료일 연속 선택 스타일 (여행 사이트 스타일) */
+.holiday-calendar-range .react-datepicker__day--in-range,
+.holiday-calendar-range .react-datepicker__day--in-selecting-range:not(.react-datepicker__day--in-range) {
+  background: #e8f0fe !important;
+  color: #1a73e8 !important;
+  border-radius: 0 !important;
+}
+.holiday-calendar-range .react-datepicker__day--range-start,
+.holiday-calendar-range .react-datepicker__day--range-end,
+.holiday-calendar-range .react-datepicker__day--in-selecting-range.react-datepicker__day--range-start,
+.holiday-calendar-range .react-datepicker__day--in-selecting-range.react-datepicker__day--range-end {
+  background: #1a73e8 !important;
+  color: #fff !important;
+  border-radius: 50% !important;
+}
+
+/* 범위 선택 중에도 오늘은 파란 막대와 구분 (앰버 링 / 밝은 배경) */
+.holiday-calendar-range .react-datepicker__day--today.react-datepicker__day--in-range:not(.react-datepicker__day--range-start):not(.react-datepicker__day--range-end),
+.holiday-calendar-range .react-datepicker__day--today.react-datepicker__day--in-selecting-range:not(.react-datepicker__day--range-start):not(.react-datepicker__day--range-end) {
+  background: #fff !important;
+  color: #1a73e8 !important;
+  box-shadow: inset 0 0 0 2px #f59e0b !important;
+  border-radius: 50% !important;
+  font-weight: 700 !important;
+}
+.holiday-calendar-range .react-datepicker__day--today.react-datepicker__day--range-start,
+.holiday-calendar-range .react-datepicker__day--today.react-datepicker__day--range-end,
+.holiday-calendar-range .react-datepicker__day--today.react-datepicker__day--in-selecting-range.react-datepicker__day--range-start,
+.holiday-calendar-range .react-datepicker__day--today.react-datepicker__day--in-selecting-range.react-datepicker__day--range-end {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #f59e0b !important;
+}
+.holiday-calendar-range .react-datepicker__day--today:not(.react-datepicker__day--in-range):not(.react-datepicker__day--range-start):not(.react-datepicker__day--range-end):not(.react-datepicker__day--in-selecting-range) {
+  background: #fffbeb !important;
+  color: #b45309 !important;
+  box-shadow: inset 0 0 0 2px #f59e0b !important;
+  font-weight: 700 !important;
+  border-radius: 50% !important;
+}
+.holiday-calendar-range .react-datepicker__day--today.react-datepicker__day--red.react-datepicker__day--in-range:not(.react-datepicker__day--range-start):not(.react-datepicker__day--range-end) {
+  color: #b45309 !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 2px #f59e0b !important;
+}
+
+/* 채팅 인용 메시지 클릭 시 원본 메시지 하이라이트 */
+@keyframes chat-msg-flash {
+  0%   { background-color: transparent; }
+  20%  { background-color: rgba(99, 102, 241, 0.18); }
+  80%  { background-color: rgba(99, 102, 241, 0.18); }
+  100% { background-color: transparent; }
+}
+.chat-msg-highlight {
+  animation: chat-msg-flash 1.5s ease-in-out;
+  border-radius: 0.5rem;
+}
+
+/* 공휴일·주말(토·일) 빨간색 스타일 (기본 DatePicker용) */
+.react-datepicker__day--highlighted,
+.react-datepicker__day--red {
+  background-color: #fecaca !important;
+  color: #b91c1c !important;
+  font-weight: 600;
+}
+.react-datepicker__day--highlighted:hover,
+.react-datepicker__day--red:hover {
+  background-color: #fca5a5 !important;
+}

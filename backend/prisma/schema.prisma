@@ -1,0 +1,659 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  EMPLOYEE
+  PLANNING
+  MANAGER
+  SUPER_ADMIN
+  CS
+  DESIGNER
+  FOREIGN_FREELANCER
+}
+
+enum AttendanceStatus {
+  NORMAL
+  LATE
+  EARLY_LEAVE
+  ABSENT
+  ON_LEAVE
+}
+
+enum WorkLocation {
+  OFFICE   // 출근 (일반)
+  OVERSEAS // 해외 근무
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// 출퇴근 누락 보정 / 시간 수정 — 연차와 유사하게 신청·승인
+enum AttendanceCorrectionKind {
+  ADD_MISSING
+  EDIT_TIMES
+}
+
+enum LeaveType {
+  ANNUAL
+  HALF_DAY_AM
+  HALF_DAY_PM
+  QUARTER_DAY
+  SICK        // 병결 (연차 차감 없음/무급)
+  OFFICIAL    // 공가 (연차 차감 없음)
+  FAMILY      // 경조휴가 (연차 차감 없음)
+}
+
+/// 경조휴가 세부 유형 (일수는 영업일 기준, 주말·공휴일 제외)
+enum FamilyLeaveSubType {
+  OWN_MARRIAGE          // 본인 결혼 5일
+  CHILD_MARRIAGE        // 자녀 결혼 1일
+  SPOUSE_CHILDBIRTH     // 배우자 출산 10일
+  PARENT_DEATH          // 부모·배우자 부모 사망 5일
+  GRANDPARENT_DEATH     // 조부모·외조부모 사망 2일
+  SIBLING_DEATH         // 형제자매 사망 2일
+}
+
+model User {
+  id                   String   @id @default(uuid())
+  email                String   @unique
+  passwordHash         String   @map("password_hash")
+  role                 Role     @default(EMPLOYEE)
+  forcePasswordChange  Boolean  @default(true) @map("force_password_change")
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  profile             EmployeeProfile?
+  attendanceRecords   AttendanceRecord[]
+  leaveBalances       LeaveBalance[]
+  leaveRequests       LeaveRequest[]      @relation("LeaveRequester")
+  approvedLeaves      LeaveRequest[]      @relation("LeaveApprover")
+  attendanceCorrectionRequests     AttendanceCorrectionRequest[] @relation("AttendanceCorrectionRequester")
+  approvedAttendanceCorrections      AttendanceCorrectionRequest[] @relation("AttendanceCorrectionApprover")
+  crmCustomers        CrmCustomer[]
+  crmNotes            CrmNote[]
+  announcements       Announcement[]
+  announcementReactions AnnouncementReaction[]
+  announcementComments AnnouncementComment[]
+  calendarEvents      CalendarEvent[]
+  calendarMemos       CalendarMemo[]
+  scheduleTasksCreated ScheduleTask[]    @relation("ScheduleTaskCreator")
+  scheduleTasksAssigned ScheduleTask[]   @relation("ScheduleTaskAssignee")
+  chatMessages        ChatMessage[]
+  chatReactions       ChatMessageReaction[]
+  designRequests      DesignRequest[]       @relation("DesignRequester")
+  designRequestsAssigned DesignRequest[]    @relation("DesignAssignee")
+  designRequestReplies DesignRequestReply[]
+  chatChannelReads   ChatChannelRead[]
+  schedulePersonalTodos SchedulePersonalTodo[]
+
+  @@map("users")
+}
+
+enum DesignRequestSport {
+  SOCCER
+  BASKETBALL
+  BASEBALL
+  BASEBALL_HOF
+  VOLLEYBALL
+}
+
+enum DesignRequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model DesignRequest {
+  id                 String              @id @default(uuid())
+  sport              DesignRequestSport
+  teamName           String              @map("team_name")
+  /// 상품명 — 일본어 고정 문자열 (종목별 허용 목록은 API·Zod에서 검증)
+  product            String              @db.VarChar(200)
+  /// 디자인 시안 차수 (1~20)
+  version            Int                 @default(1)
+  initialRequest     String              @map("initial_request")
+  initialRequestEn   String?             @map("initial_request_en")
+  /// 일본어 원문일 때 디자이너 표시용 한국어 번역
+  initialRequestKo   String?             @map("initial_request_ko") @db.Text
+  /// 초기 요청 원문 언어 (영어 번역 시 ko→en / ja→en)
+  initialRequestLang String              @default("ko") @map("initial_request_lang") @db.VarChar(8)
+  priorityFirst      Boolean             @default(false) @map("priority_first")
+  /// 농구 전용: 공식전 대상(표시용 【●】 등). 다른 종목에서는 항상 false
+  basketballOfficialGame Boolean         @default(false) @map("basketball_official_game")
+  status             DesignRequestStatus @default(PENDING)
+  requesterId        String              @map("requester_id")
+  assigneeId         String?             @map("assignee_id")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  requester User                    @relation("DesignRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  assignee  User?                   @relation("DesignAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  attachments DesignRequestAttachment[]
+  replies     DesignRequestReply[]
+
+  @@index([sport, createdAt])
+  @@index([requesterId])
+  @@map("design_requests")
+}
+
+model DesignRequestAttachment {
+  id              String   @id @default(uuid())
+  designRequestId String   @map("design_request_id")
+  filename        String
+  s3Key           String   @map("s3_key")
+  mimeType        String   @map("mime_type")
+  size            Int
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  designRequest DesignRequest @relation(fields: [designRequestId], references: [id], onDelete: Cascade)
+
+  @@map("design_request_attachments")
+}
+
+enum DesignRequestReplyKind {
+  COMMENT
+  DRAFT
+  /// CS·관리자 재요청(코멘트) — 채팅 알림 구분용
+  RE_REQUEST
+}
+
+model DesignRequestReply {
+  id              String                 @id @default(uuid())
+  designRequestId String                 @map("design_request_id")
+  userId          String                 @map("user_id")
+  kind            DesignRequestReplyKind @default(COMMENT)
+  content         String                 @default("")
+  /// 재요청 등 프리랜서용 영어 번역 (nullable)
+  contentEn       String?                @map("content_en") @db.Text
+  /// 일본어 재요청 시 디자이너 표시용 한국어 번역
+  contentKo       String?                @map("content_ko") @db.Text
+  /// 재요청(RE_REQUEST) 행만 사용. 초기 요청 우선 제작은 `DesignRequest.priorityFirst`
+  priorityFirst   Boolean                @default(false) @map("priority_first")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  designRequest DesignRequest               @relation(fields: [designRequestId], references: [id], onDelete: Cascade)
+  user          User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments   DesignRequestReplyAttachment[]
+
+  @@index([designRequestId, createdAt])
+  @@map("design_request_replies")
+}
+
+model DesignRequestReplyAttachment {
+  id        String   @id @default(uuid())
+  replyId   String   @map("reply_id")
+  filename  String
+  s3Key     String   @map("s3_key")
+  mimeType  String   @map("mime_type")
+  size      Int
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  reply DesignRequestReply @relation(fields: [replyId], references: [id], onDelete: Cascade)
+
+  @@map("design_request_reply_attachments")
+}
+
+/// 디자인 요청·재요청 모달용 정형문 (한국어/일본어 별도 관리)
+enum DesignFixedPhraseLang {
+  KO
+  JA
+}
+
+model DesignFixedPhrase {
+  id        String               @id @default(uuid())
+  /// 레거시·호환용. UI에서는 사용하지 않음.
+  title     String               @default("") @db.VarChar(300)
+  message   String               @db.Text
+  lang      DesignFixedPhraseLang
+  sport     DesignRequestSport   @default(SOCCER)
+  sortOrder Int                  @default(0) @map("sort_order")
+  isPinned  Boolean              @default(false) @map("is_pinned")
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  @@index([lang, sport, isPinned, sortOrder])
+  @@map("design_fixed_phrases")
+}
+
+enum ChatChannelType {
+  PUBLIC
+  DM
+}
+
+model ChatChannel {
+  id             String          @id @default(uuid())
+  slug           String          @unique
+  name           String
+  type           ChatChannelType  @default(PUBLIC)
+  participantIds Json?            @map("participant_ids")
+  /// null 또는 빈 배열이면 채팅 접근 가능한 모든 역할 허용. 예: ["DESIGNER","MANAGER"]
+  allowedRoles   Json?           @map("allowed_roles")
+  order          Int             @default(0)
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  messages      ChatMessage[]
+  channelReads  ChatChannelRead[]
+
+  @@map("chat_channels")
+}
+
+model ChatChannelRead {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  channelId  String   @map("channel_id")
+  lastReadAt DateTime @default(now()) @map("last_read_at")
+  /// 갤러리(재요청) 탭 마지막 열람 — null이면 lastReadAt과 동일하게 취급
+  lastReadGalleryAt DateTime? @map("last_read_gallery_at")
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelId])
+  @@map("chat_channel_reads")
+}
+
+model ChatMessage {
+  id                String   @id @default(uuid())
+  channelId         String   @map("channel_id")
+  userId            String   @map("user_id")
+  content           String
+  translatedContent String?  @map("translated_content")
+  tags              Json?
+  parentMessageId   String?  @map("parent_message_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  channel       ChatChannel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentMessage ChatMessage?        @relation("MessageReplies", fields: [parentMessageId], references: [id], onDelete: SetNull)
+  replies       ChatMessage[]       @relation("MessageReplies")
+  attachments   ChatAttachment[]
+  reactions     ChatMessageReaction[]
+
+  @@index([channelId, createdAt])
+  @@map("chat_messages")
+}
+
+model ChatMessageReaction {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("chat_message_reactions")
+}
+
+model ChatAttachment {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  filename  String
+  s3Key     String   @map("s3_key")
+  mimeType  String   @map("mime_type")
+  size      Int
+  /// 같은 메시지 내 첨부 순서 (파일 선택 순서와 일치)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId, sortOrder])
+  @@map("chat_attachments")
+}
+
+model CalendarEvent {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@map("calendar_events")
+}
+
+model CalendarMemo {
+  id        String   @id @default(uuid())
+  date      DateTime @db.Date
+  content   String
+  userId    String   @map("user_id")
+  isShared  Boolean  @default(false) @map("is_shared")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("calendar_memos")
+}
+
+model EmployeeProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  name              String
+  phone             String?
+  position          String?
+  hireDate          DateTime? @map("hire_date")
+  departmentId      String?   @map("department_id")
+  preferredLanguage String   @default("ko") @map("preferred_language")
+  /// 채팅 입력 시 자동 번역 모드 (none | ko-en | ja-en | en-ko | en-ja)
+  chatTranslationMode String @default("none") @map("chat_translation_mode")
+  /// 프로필 사진 S3 키
+  avatarS3Key  String?  @map("avatar_s3_key")
+
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  @@map("employee_profiles")
+}
+
+model Department {
+  id        String  @id @default(uuid())
+  name      String  @unique
+  managerId String? @map("manager_id")
+
+  employees EmployeeProfile[]
+
+  @@map("departments")
+}
+
+model AttendanceRecord {
+  id           String           @id @default(uuid())
+  userId       String           @map("user_id")
+  date         DateTime         @db.Date
+  checkIn      DateTime?        @map("check_in")
+  checkOut     DateTime?        @map("check_out")
+  status       AttendanceStatus @default(NORMAL)
+  workLocation WorkLocation     @default(OFFICE) @map("work_location")
+  note         String?
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  correctionRequests AttendanceCorrectionRequest[]
+
+  @@unique([userId, date])
+  @@map("attendance_records")
+}
+
+model AttendanceCorrectionRequest {
+  id                   String                   @id @default(uuid())
+  userId               String                   @map("user_id")
+  kind                 AttendanceCorrectionKind
+  workDate             DateTime                 @map("work_date") @db.Date
+  attendanceRecordId   String?                  @map("attendance_record_id")
+  proposedCheckIn      DateTime?                @map("proposed_check_in")
+  proposedCheckOut     DateTime?                @map("proposed_check_out")
+  workLocation         WorkLocation             @default(OFFICE) @map("work_location")
+  reason               String?
+  status               LeaveRequestStatus       @default(PENDING)
+  approvedBy           String?                  @map("approved_by")
+  approvedAt           DateTime?                @map("approved_at")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+
+  user               User               @relation("AttendanceCorrectionRequester", fields: [userId], references: [id], onDelete: Cascade)
+  approver           User?              @relation("AttendanceCorrectionApprover", fields: [approvedBy], references: [id])
+  attendanceRecord   AttendanceRecord?  @relation(fields: [attendanceRecordId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@map("attendance_correction_requests")
+}
+
+model LeavePolicy {
+  id           String  @id @default(uuid())
+  name         String  @unique
+  daysPerYear  Int     @map("days_per_year")
+  isCarryOver  Boolean @default(false) @map("is_carry_over")
+  description  String?
+
+  balances LeaveBalance[]
+
+  @@map("leave_policies")
+}
+
+model LeaveBalance {
+  id         String @id @default(uuid())
+  userId     String @map("user_id")
+  policyId   String @map("policy_id")
+  year       Int
+  totalDays  Float  @default(0) @map("total_days")
+  usedDays   Float  @default(0) @map("used_days")
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policy LeavePolicy @relation(fields: [policyId], references: [id])
+
+  @@unique([userId, policyId, year])
+  @@map("leave_balances")
+}
+
+model LeaveRequest {
+  id             String              @id @default(uuid())
+  userId         String              @map("user_id")
+  type           LeaveType
+  startDate      DateTime            @map("start_date") @db.Date
+  endDate        DateTime            @map("end_date") @db.Date
+  days           Float
+  reason         String?
+  familySubType  FamilyLeaveSubType? @map("family_sub_type")
+  status         LeaveRequestStatus  @default(PENDING)
+  approvedBy  String?            @map("approved_by")
+  approvedAt  DateTime?          @map("approved_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  user     User  @relation("LeaveRequester", fields: [userId], references: [id], onDelete: Cascade)
+  approver User? @relation("LeaveApprover", fields: [approvedBy], references: [id])
+
+  @@map("leave_requests")
+}
+
+model Holiday {
+  id        String   @id @default(uuid())
+  date      DateTime @unique @db.Date
+  name      String
+  isCompany Boolean  @default(false) @map("is_company")
+
+  @@map("holidays")
+}
+
+model Announcement {
+  id        String    @id @default(uuid())
+  title     String
+  content   String
+  isPinned  Boolean   @default(false) @map("is_pinned")
+  pinnedAt  DateTime? @map("pinned_at")
+  authorId  String    @map("author_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  author    User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  images    AnnouncementImage[]
+  reactions AnnouncementReaction[]
+  comments  AnnouncementComment[]
+
+  @@map("announcements")
+}
+
+/// 공지 첨부 이미지 (S3 키, chat 버킷 `announcements/{userId}/...`)
+model AnnouncementImage {
+  id             String   @id @default(uuid())
+  announcementId String   @map("announcement_id")
+  s3Key          String   @map("s3_key")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@index([announcementId, sortOrder])
+  @@map("announcement_images")
+}
+
+model AnnouncementReaction {
+  id             String @id @default(uuid())
+  announcementId String @map("announcement_id")
+  userId         String @map("user_id")
+  emoji          String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@map("announcement_reactions")
+}
+
+model AnnouncementComment {
+  id             String   @id @default(uuid())
+  announcementId String   @map("announcement_id")
+  userId         String   @map("user_id")
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("announcement_comments")
+}
+
+model CrmCustomer {
+  id           String   @id @default(uuid())
+  name         String
+  contact      String?
+  email        String?
+  status       String   @default("ACTIVE")
+  assignedTo   String?  @map("assigned_to")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  assignee User?     @relation(fields: [assignedTo], references: [id])
+  notes    CrmNote[]
+
+  @@map("crm_customers")
+}
+
+model CrmNote {
+  id          String   @id @default(uuid())
+  customerId  String   @map("customer_id")
+  userId      String   @map("user_id")
+  content     String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  customer CrmCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id])
+
+  @@map("crm_notes")
+}
+
+enum ScheduleTaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum ScheduleTaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model ScheduleProject {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  color       String   @default("#3B82F6") // hex 색상
+  year        Int
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tasks ScheduleTask[]
+
+  @@map("schedule_projects")
+}
+
+model ScheduleTask {
+  id          String               @id @default(uuid())
+  title       String
+  description String?
+  status      ScheduleTaskStatus   @default(TODO)
+  priority    ScheduleTaskPriority @default(MEDIUM)
+  projectId   String?              @map("project_id") // null이면 미분류
+  startDate   DateTime?            @map("start_date") @db.Date
+  endDate     DateTime?            @map("end_date") @db.Date
+  progress    Int                  @default(0) // 0~100
+  dueDate     DateTime?            @map("due_date") @db.Date // 레거시
+  order       Int                  @default(0)
+  createdBy   String               @map("created_by")
+  assigneeId  String?              @map("assignee_id") // 레거시, assigneeIds 우선
+  assigneeIds Json?                @map("assignee_ids") // ["userId1","userId2"] 다중 담당자
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+
+  project  ScheduleProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator  User            @relation("ScheduleTaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  assignee User?           @relation("ScheduleTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@map("schedule_tasks")
+}
+
+/// 스케줄 관리 화면용 개인 To-do (로그인 사용자별)
+model SchedulePersonalTodo {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String   @db.VarChar(500)
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, done, sortOrder])
+  @@map("schedule_personal_todos")
+}
+
+/// 고정 번역 딕셔너리 (한 행에 한국어·영어·일본어)
+model TranslationDictionaryEntry {
+  id        String   @id @default(uuid())
+  /// colors, apparel_terms, phrases 등
+  category  String
+  /// 한국어 원문 또는 동의어 배열 (JSON: string | string[])
+  ko        Json     @map("ko_json")
+  en        String   @map("en_text")
+  ja        String   @default("") @map("ja_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("translation_dictionary_entries")
+}
+
+/// 번역 가이드라인 (마크다운, 파일명과 동일한 name)
+model TranslationGuideline {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  content   String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("translation_guidelines")
+}
