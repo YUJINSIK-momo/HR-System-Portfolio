@@ -33,8 +33,18 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
+      - name: Disable Jekyll on GitHub Pages
+        run: touch frontend/dist/.nojekyll
+
       - name: Add SPA fallback for GitHub Pages
         run: cp frontend/dist/index.html frontend/dist/404.html
+
+      - name: Show deployed entry (debug)
+        run: |
+          echo "--- index.html script tags ---"
+          grep -E 'script|link' frontend/dist/index.html || true
+          echo "--- assets ---"
+          ls -la frontend/dist/assets/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
