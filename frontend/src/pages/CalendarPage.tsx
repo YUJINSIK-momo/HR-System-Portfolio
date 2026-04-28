@@ -60,13 +60,22 @@ export default function CalendarPage() {
     queryKey: ['holidays', holidayStart, holidayEnd],
     queryFn: () => api.get('/holidays', { params: { start: holidayStart, end: holidayEnd } }).then((r) => r.data),
   });
+  const safeHolidayRows = useMemo(() => {
+    if (!Array.isArray(holidays)) return [];
+    return holidays.filter((h): h is { date: string; name?: string | null } => {
+      if (h == null || typeof h !== 'object') return false;
+      const raw = (h as { date?: unknown }).date;
+      return typeof raw === 'string' && raw.length > 0;
+    });
+  }, [holidays]);
   const holidayDateKeys = useMemo(
-    () => new Set((holidays || []).map((h: { date: string }) => String(h.date).slice(0, 10))),
-    [holidays]
+    () => new Set(safeHolidayRows.map((h) => String(h.date).slice(0, 10))),
+    [safeHolidayRows]
   );
   const holidayNameByDate = useMemo(
-    () => Object.fromEntries((holidays || []).map((h: { date: string; name: string }) => [String(h.date).slice(0, 10), h.name])),
-    [holidays]
+    () =>
+      Object.fromEntries(safeHolidayRows.map((h) => [String(h.date).slice(0, 10), h.name ?? ''])),
+    [safeHolidayRows]
   );
 
   const eventsByDate = useMemo(() => {

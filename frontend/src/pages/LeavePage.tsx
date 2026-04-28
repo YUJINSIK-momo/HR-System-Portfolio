@@ -103,6 +103,10 @@ export default function LeavePage() {
     queryKey: ['leave', 'balance'],
     queryFn: () => api.get('/leave/balance').then((r) => r.data),
   });
+  const balanceRows = useMemo(() => {
+    if (!Array.isArray(balances)) return [];
+    return balances.filter((b: unknown): b is Record<string, unknown> => b != null && typeof b === 'object');
+  }, [balances]);
   const { data: requests } = useQuery({
     queryKey: ['leave', 'requests'],
     queryFn: () => api.get('/leave/requests').then((r) => r.data),
@@ -193,9 +197,9 @@ export default function LeavePage() {
       </div>
 
       {/* Balance cards */}
-      {Array.isArray(balances) && balances.length > 0 && (
+      {balanceRows.length > 0 && (
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {balances.map((b: any, i: number) => {
+          {balanceRows.map((b: any, i: number) => {
             const remaining = b.totalDays - b.usedDays;
             const pct = b.totalDays > 0 ? Math.round((b.usedDays / b.totalDays) * 100) : 0;
             const gradients = [
@@ -212,7 +216,7 @@ export default function LeavePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <p className="text-sm font-semibold text-slate-600">{b.policy?.name ?? t('leaveBalance')}</p>
+                  <p className="text-sm font-semibold text-slate-600">{b?.policy?.name ?? t('leaveBalance')}</p>
                 </div>
                 <p className="text-4xl font-bold text-slate-900 mb-0.5">
                   {remaining}<span className="text-base font-normal text-slate-400 ml-1">{t('days')}</span>

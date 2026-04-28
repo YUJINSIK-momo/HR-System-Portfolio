@@ -292,11 +292,11 @@ export default function DashboardPage() {
               {NOTIFICATIONS.map((n) => (
                 <li key={n.id} className="flex items-start gap-3 rounded-xl p-2.5 hover:bg-slate-50 transition-colors">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
-                    {n.name.charAt(0)}
+                    {(n?.name ?? '?').charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-700">
-                      <span className="font-semibold">{n.name}</span>
+                      <span className="font-semibold">{n?.name ?? '—'}</span>
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">{n.action}</p>
                   </div>
