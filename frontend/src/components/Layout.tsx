@@ -120,7 +120,7 @@ function SidebarSection({ section }: { section: NavSection }) {
     <div>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-3 py-1.5 mb-0.5 rounded-lg hover:bg-slate-100/80 transition-colors group"
+        className="flex w-full items-center justify-between px-3 py-1.5 mb-0.5 rounded-lg hover:bg-slate-50 transition-colors group"
       >
         <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${
           isActive ? 'text-indigo-500' : 'text-slate-400 group-hover:text-slate-500'
@@ -140,8 +140,8 @@ function SidebarSection({ section }: { section: NavSection }) {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-200'
+                    : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
                 }`
               }
             >
@@ -172,32 +172,34 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <aside className="flex h-full flex-col bg-white border-r border-slate-200">
       {/* Brand */}
-      <div className="px-5 py-5 border-b border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-md shadow-indigo-200">
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-700 px-5 py-5">
+        <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10" />
+        <div className="absolute right-2 bottom-1 h-12 w-12 rounded-full bg-white/5" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 shadow-sm">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
           <div>
-            <p className="text-sm font-bold text-slate-900">HR System</p>
-            <p className="text-[10px] text-slate-400 font-medium">Portfolio Demo</p>
+            <p className="text-sm font-bold text-white">HR System</p>
+            <p className="text-[10px] text-indigo-200 font-medium">Portfolio Demo</p>
           </div>
         </div>
       </div>
 
       {/* User profile */}
-      <div className="px-5 py-3 border-b border-slate-100">
+      <div className="px-4 py-3 border-b border-slate-100">
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-sm font-bold text-white">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-sm font-bold text-white shadow-sm">
             {user?.name?.charAt(0) ?? 'A'}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-800 truncate">{user?.name ?? '관리자'}</p>
             <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
           </div>
-          <span className="shrink-0 rounded-md bg-indigo-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-indigo-600">
+          <span className="shrink-0 rounded-md bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
             Admin
           </span>
         </div>
@@ -252,7 +254,7 @@ export default function Layout() {
       {/* Main */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         {/* Top header */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-6">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-100 bg-white px-4 lg:px-6 shadow-sm shadow-slate-100">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -260,14 +262,17 @@ export default function Layout() {
             >
               <IconMenu />
             </button>
-            <h2 className="text-sm font-semibold text-slate-800">{pageTitle}</h2>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:block h-4 w-0.5 bg-slate-200 rounded-full" />
+              <h2 className="text-sm font-semibold text-slate-700">{pageTitle}</h2>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:block text-xs text-slate-400">
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:block text-xs font-medium text-slate-400 bg-slate-50 rounded-lg px-3 py-1.5">
               {new Date('2026-04-28').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
             </span>
-            <div className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-xs font-bold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white shadow-sm shadow-indigo-200">
               관
             </div>
           </div>

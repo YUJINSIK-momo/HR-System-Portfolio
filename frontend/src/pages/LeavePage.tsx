@@ -1,17 +1,11 @@
 import { useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { ko, ja } from 'date-fns/locale';
 import api from '@/lib/api';
 import { useTranslation } from '@/hooks/useTranslation';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
   FAMILY_LEAVE_SUBTYPES,
   FAMILY_LEAVE_BUSINESS_DAYS,
   computeFamilyLeaveEndLocal,
-  isBusinessDayLocal,
   type FamilyLeaveSubType,
 } from '@/lib/familyLeave';
 import { leaveTypeDisplay as formatLeaveType } from '@/lib/leaveTypeDisplay';
@@ -27,20 +21,12 @@ const defaultForm: {
   familySubType: FamilyLeaveSubType | '';
 } = { type: 'ANNUAL', startDate: '', endDate: '', reason: '', quarterDays: 0.25, familySubType: '' };
 
-function formatDateForApi(d: Date | null): string {
-  if (!d) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 const LABEL_CLS = 'block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide';
 const INPUT_CLS = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent';
 
+
 export default function LeavePage() {
   const { t, lang } = useTranslation();
-  const dateLocale = lang === 'ja' ? ja : ko;
   const locale = lang === 'ja' ? 'ja-JP' : 'ko-KR';
   const statusLabel: Record<string, string> = { PENDING: t('pending'), APPROVED: t('approved'), REJECTED: t('rejected') };
   const typeLabel: Record<string, string> = {
@@ -49,55 +35,10 @@ export default function LeavePage() {
   };
   const leaveTypeDisplay = (r: { type: string; familySubType?: string | null }) => formatLeaveType(r, t, typeLabel);
   const [showForm, setShowForm] = useState(false);
-  const [showDateModal, setShowDateModal] = useState(false);
   const [form, setForm] = useState(defaultForm);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
   const [error, setError] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const queryClient = useQueryClient();
-  const isMobile = useMediaQuery('(max-width: 639px)');
-
-  const { data: holidays } = useQuery({
-    queryKey: ['holidays'],
-    queryFn: async () => {
-      const start = new Date(2024, 0, 1);
-      const end = new Date(2027, 11, 31);
-      const res = await api.get('/holidays', { params: { start: formatDateForApi(start), end: formatDateForApi(end) } });
-      return res.data;
-    },
-  });
-
-  const safeHolidayRows = useMemo(() => {
-    if (!Array.isArray(holidays)) return [];
-    return holidays.filter((h): h is { date: string; name?: string | null } => {
-      if (h == null || typeof h !== 'object') return false;
-      const raw = (h as { date?: unknown }).date;
-      return typeof raw === 'string' && raw.length > 0;
-    });
-  }, [holidays]);
-
-  const holidayDateKeys = useMemo(
-    () => new Set<string>(safeHolidayRows.map((h) => String(h.date).slice(0, 10))),
-    [safeHolidayRows]
-  );
-  const holidayNameByDate = useMemo(
-    () =>
-      Object.fromEntries(
-        safeHolidayRows.map((h) => [String(h.date).slice(0, 10), h.name ?? ''])
-      ),
-    [safeHolidayRows]
-  );
-  const highlightDates = safeHolidayRows.map((h) => {
-    const [y, m, d] = String(h.date).slice(0, 10).split('-').map(Number);
-    return new Date(y, (m || 1) - 1, d || 1);
-  });
-  const dayClassName = (date: Date) => {
-    const day = date.getDay();
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    if (day === 0 || day === 6 || holidayDateKeys.has(key)) return 'react-datepicker__day--red';
-    return '';
-  };
 
   const { data: balances } = useQuery({
     queryKey: ['leave', 'balance'],
@@ -107,6 +48,7 @@ export default function LeavePage() {
     if (!Array.isArray(balances)) return [];
     return balances.filter((b: unknown): b is Record<string, unknown> => b != null && typeof b === 'object');
   }, [balances]);
+
   const { data: requests } = useQuery({
     queryKey: ['leave', 'requests'],
     queryFn: () => api.get('/leave/requests').then((r) => r.data),
@@ -131,7 +73,7 @@ export default function LeavePage() {
       api.post('/leave/request', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave'] });
-      setShowForm(false); setShowDateModal(false); setForm(defaultForm); setStartDate(null); setEndDate(null); setError('');
+      setShowForm(false); setForm(defaultForm); setError('');
     },
     onError: (err: any) => setError(err.response?.data?.message || '신청 중 오류가 발생했습니다.'),
   });
@@ -139,45 +81,42 @@ export default function LeavePage() {
   const isHalfDay = form.type === 'HALF_DAY_AM' || form.type === 'HALF_DAY_PM';
   const isQuarterDay = form.type === 'QUARTER_DAY';
   const isFamily = form.type === 'FAMILY';
+  const isSingleDay = isHalfDay || isQuarterDay;
 
   const familyEndPreview = useMemo(() => {
-    if (!isFamily || !startDate || !form.familySubType) return null;
-    return computeFamilyLeaveEndLocal(startDate, FAMILY_LEAVE_BUSINESS_DAYS[form.familySubType], holidayDateKeys);
-  }, [isFamily, startDate, form.familySubType, holidayDateKeys]);
+    if (!isFamily || !form.startDate || !form.familySubType) return null;
+    const start = new Date(form.startDate + 'T00:00:00');
+    return computeFamilyLeaveEndLocal(start, FAMILY_LEAVE_BUSINESS_DAYS[form.familySubType as FamilyLeaveSubType], new Set());
+  }, [isFamily, form.startDate, form.familySubType]);
 
-  const handleOpenForm = () => { setShowForm(true); setError(''); setForm(defaultForm); setStartDate(null); setEndDate(null); setShowDateModal(false); };
-  const handleStartChange = (d: Date | null) => {
-    setStartDate(d);
-    if (isFamily) { setForm((f) => ({ ...f, startDate: formatDateForApi(d), endDate: '' })); return; }
-    setForm((f) => ({ ...f, startDate: formatDateForApi(d), endDate: (isHalfDay || isQuarterDay) ? formatDateForApi(d) : f.endDate }));
-    if (isHalfDay || isQuarterDay) setEndDate(d);
-    else if (!endDate || (d && endDate < d)) setEndDate(d);
+  const handleTypeChange = (newType: LeaveTypeValue) => {
+    const single = newType === 'HALF_DAY_AM' || newType === 'HALF_DAY_PM' || newType === 'QUARTER_DAY';
+    const family = newType === 'FAMILY';
+    setForm({
+      ...form,
+      type: newType,
+      endDate: single ? form.startDate : '',
+      familySubType: family ? (form.familySubType || 'OWN_MARRIAGE') : '',
+      reason: family ? '' : form.reason,
+    });
   };
-  const handleRangeChange = (range: [Date | null, Date | null] | null) => {
-    const [s, e] = range ?? [null, null];
-    setStartDate(s); setEndDate(e);
-    setForm((f) => ({ ...f, startDate: formatDateForApi(s), endDate: e ? formatDateForApi(e) : '' }));
-  };
-  const onStartChange = (v: Date | Date[] | null) => { const d = Array.isArray(v) ? (v[0] ?? null) : v; handleStartChange(d); };
 
-  const closeForm = () => { setShowForm(false); setShowDateModal(false); setError(''); setForm(defaultForm); };
-
-  const renderDayContents = (day: number, date?: Date) => {
-    const key = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : '';
-    const name = date && holidayNameByDate[key];
-    return name ? (
-      <span title={name} className="flex flex-col items-center justify-center gap-0.5">
-        <span>{day}</span>
-        <span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" aria-hidden />
-      </span>
-    ) : <span>{day}</span>;
-  };
+  const handleOpenForm = () => { setShowForm(true); setError(''); setForm(defaultForm); };
+  const closeForm = () => { setShowForm(false); setError(''); setForm(defaultForm); };
 
   const statusBadge = (status: string) => {
     if (status === 'APPROVED') return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100';
     if (status === 'REJECTED') return 'bg-rose-50 text-rose-700 ring-1 ring-rose-100';
     return 'bg-amber-50 text-amber-700 ring-1 ring-amber-100';
   };
+
+  const canSubmit = (() => {
+    if (submitLeave.isPending) return false;
+    if (!form.startDate) return false;
+    if (isFamily) return !!form.familySubType;
+    if (isSingleDay) return true;
+    return !!form.endDate;
+  })();
 
   return (
     <div className="min-h-full bg-slate-50 p-6 lg:p-8">
@@ -191,7 +130,9 @@ export default function LeavePage() {
           onClick={handleOpenForm}
           className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity self-start sm:self-auto"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
           {t('leaveRequest')}
         </button>
       </div>
@@ -331,25 +272,17 @@ export default function LeavePage() {
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-slate-900">{t('leaveRequest')}</h3>
               <button onClick={closeForm} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 transition-colors">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
             <div className="space-y-4">
+              {/* Leave type */}
               <div>
                 <label className={LABEL_CLS}>{t('leaveTypeLabel')}</label>
-                <select
-                  value={form.type}
-                  onChange={(e) => {
-                    const newType = e.target.value as LeaveTypeValue;
-                    const singleDay = newType === 'HALF_DAY_AM' || newType === 'HALF_DAY_PM' || newType === 'QUARTER_DAY';
-                    const nextFamily = newType === 'FAMILY';
-                    const quarterOk = form.quarterDays === 0.25 || form.quarterDays === 0.75;
-                    setForm({ ...form, type: newType, quarterDays: newType === 'QUARTER_DAY' && !quarterOk ? 0.25 : form.quarterDays, endDate: singleDay ? form.startDate : nextFamily ? '' : '', familySubType: nextFamily ? (form.familySubType || 'OWN_MARRIAGE') : '', reason: nextFamily ? '' : form.reason });
-                    if (singleDay) setEndDate(startDate); else if (nextFamily) setEndDate(null); else setEndDate(null);
-                  }}
-                  className={INPUT_CLS}
-                >
+                <select value={form.type} onChange={(e) => handleTypeChange(e.target.value as LeaveTypeValue)} className={INPUT_CLS}>
                   <option value="ANNUAL">{t('annual')}</option>
                   <option value="HALF_DAY_AM">{t('halfDayAm')}</option>
                   <option value="HALF_DAY_PM">{t('halfDayPm')}</option>
@@ -360,97 +293,118 @@ export default function LeavePage() {
                 </select>
               </div>
 
-              {isQuarterDay && (
-                <>
-                  <div>
-                    <label className={LABEL_CLS}>{t('date')}</label>
-                    <DatePicker selected={startDate} onChange={onStartChange} locale={dateLocale} dateFormat="yyyy-MM-dd" formatWeekDay={(n) => n.charAt(0)} renderDayContents={renderDayContents} className={INPUT_CLS} placeholderText={t('dateSelect')} highlightDates={highlightDates} dayClassName={dayClassName} maxDate={new Date(2027, 11, 31)} calendarClassName={isMobile ? 'holiday-calendar-google holiday-calendar-mobile' : 'holiday-calendar-google'} popperContainer={({ children }: { children?: React.ReactNode }) => createPortal(children ?? null, document.body)} />
-                    <p className="text-xs text-slate-400 mt-1">{t('redCaption')}</p>
-                  </div>
-                  <div>
-                    <label className={LABEL_CLS}>{t('quarterDayUnit')}</label>
-                    <select value={form.quarterDays} onChange={(e) => setForm({ ...form, quarterDays: parseFloat(e.target.value) })} className={INPUT_CLS}>
-                      <option value={0.25}>0.25{t('days')}</option>
-                      <option value={0.75}>0.75{t('days')}</option>
-                    </select>
-                  </div>
-                </>
-              )}
-
+              {/* Family sub-type */}
               {isFamily && (
-                <>
-                  <div>
-                    <label className={LABEL_CLS}>{t('familySubTypeLabel')}</label>
-                    <select value={form.familySubType || 'OWN_MARRIAGE'} onChange={(e) => setForm({ ...form, familySubType: e.target.value as FamilyLeaveSubType })} className={INPUT_CLS}>
-                      {FAMILY_LEAVE_SUBTYPES.map((st) => {
-                        const days = FAMILY_LEAVE_BUSINESS_DAYS[st];
-                        const daysLabel = t('familyLeaveBusinessDaysLabel').replace('{0}', String(days));
-                        return <option key={st} value={st}>{t(`familySub_${st}` as TranslationKey)} ({daysLabel})</option>;
-                      })}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={LABEL_CLS}>{t('date')}</label>
-                    <DatePicker selected={startDate} onChange={onStartChange} locale={dateLocale} dateFormat="yyyy-MM-dd" formatWeekDay={(n) => n.charAt(0)} filterDate={(d) => isBusinessDayLocal(d, holidayDateKeys)} renderDayContents={renderDayContents} className={INPUT_CLS} placeholderText={t('dateSelect')} highlightDates={highlightDates} dayClassName={dayClassName} maxDate={new Date(2027, 11, 31)} calendarClassName={isMobile ? 'holiday-calendar-google holiday-calendar-mobile' : 'holiday-calendar-google'} popperContainer={({ children }: { children?: React.ReactNode }) => createPortal(children ?? null, document.body)} />
-                    <p className="text-xs text-slate-400 mt-1">{t('familyLeaveHint')}</p>
-                    {familyEndPreview && startDate && form.familySubType && (
-                      <p className="text-sm font-medium text-slate-700 mt-2 p-2.5 rounded-lg bg-indigo-50">
-                        {t('familyLeaveEndPreview').replace('{0}', familyEndPreview.toLocaleDateString(locale)).replace('{1}', t('familyLeaveBusinessDaysLabel').replace('{0}', String(FAMILY_LEAVE_BUSINESS_DAYS[form.familySubType])))}
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {!isQuarterDay && !isFamily && (
                 <div>
-                  <label className={LABEL_CLS}>{isHalfDay ? t('date') : `${t('startDate')} ~ ${t('endDate')}`}</label>
-                  {isHalfDay ? (
-                    <DatePicker selected={startDate} onChange={onStartChange} locale={dateLocale} dateFormat="yyyy-MM-dd" formatWeekDay={(n) => n.charAt(0)} renderDayContents={renderDayContents} className={INPUT_CLS} placeholderText={t('dateSelect')} highlightDates={highlightDates} dayClassName={dayClassName} maxDate={new Date(2027, 11, 31)} calendarClassName={isMobile ? 'holiday-calendar-google holiday-calendar-mobile' : 'holiday-calendar-google'} popperContainer={({ children }: { children?: React.ReactNode }) => createPortal(children ?? null, document.body)} />
-                  ) : isMobile ? (
-                    <>
-                      <button type="button" onClick={() => setShowDateModal(true)} className="w-full flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left">
-                        <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        <span className={`text-sm ${startDate && endDate ? 'text-slate-800' : 'text-slate-400'}`}>
-                          {startDate && endDate ? `${startDate.toLocaleDateString(locale)} - ${endDate.toLocaleDateString(locale)}` : t('dateRangePlaceholder')}
-                        </span>
-                      </button>
-                      {showDateModal && (
-                        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-                          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                              <h4 className="text-base font-bold text-slate-900">{t('dateSelect')}</h4>
-                              <button type="button" onClick={() => setShowDateModal(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto px-3 py-4 min-h-0">
-                              <DatePicker selectsRange startDate={startDate} endDate={endDate} onChange={handleRangeChange} locale={dateLocale} dateFormat="yyyy-MM-dd" formatWeekDay={(n) => n.charAt(0)} renderDayContents={renderDayContents} highlightDates={highlightDates} dayClassName={dayClassName} maxDate={new Date(2027, 11, 31)} calendarClassName="holiday-calendar-google holiday-calendar-compact holiday-calendar-range" inline monthsShown={2} />
-                            </div>
-                            <div className="p-4 border-t border-slate-100">
-                              <button type="button" onClick={() => setShowDateModal(false)} className="w-full rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3 text-sm font-semibold text-white shadow-md shadow-indigo-200">{t('dateApply')}</button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <DatePicker selectsRange startDate={startDate} endDate={endDate} onChange={handleRangeChange} locale={dateLocale} dateFormat="yyyy-MM-dd" formatWeekDay={(n) => n.charAt(0)} renderDayContents={renderDayContents} highlightDates={highlightDates} dayClassName={dayClassName} maxDate={new Date(2027, 11, 31)} calendarClassName="holiday-calendar-google holiday-calendar-range" placeholderText={t('dateRangePlaceholder')} className={INPUT_CLS} popperContainer={({ children }: { children?: React.ReactNode }) => createPortal(children ?? null, document.body)} />
-                  )}
-                  <p className="text-xs text-slate-400 mt-1">{!isHalfDay && <span className="block mb-0.5">{t('dateRangeHint')}</span>}{t('redCaption')}</p>
+                  <label className={LABEL_CLS}>{t('familySubTypeLabel')}</label>
+                  <select
+                    value={form.familySubType || 'OWN_MARRIAGE'}
+                    onChange={(e) => setForm({ ...form, familySubType: e.target.value as FamilyLeaveSubType })}
+                    className={INPUT_CLS}
+                  >
+                    {FAMILY_LEAVE_SUBTYPES.map((st) => {
+                      const days = FAMILY_LEAVE_BUSINESS_DAYS[st];
+                      const daysLabel = t('familyLeaveBusinessDaysLabel').replace('{0}', String(days));
+                      return (
+                        <option key={st} value={st}>
+                          {t(`familySub_${st}` as TranslationKey)} ({daysLabel})
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
               )}
 
+              {/* Quarter day amount */}
+              {isQuarterDay && (
+                <div>
+                  <label className={LABEL_CLS}>{t('quarterDayUnit')}</label>
+                  <select
+                    value={form.quarterDays}
+                    onChange={(e) => setForm({ ...form, quarterDays: parseFloat(e.target.value) })}
+                    className={INPUT_CLS}
+                  >
+                    <option value={0.25}>0.25{t('days')}</option>
+                    <option value={0.75}>0.75{t('days')}</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Date fields */}
+              {isSingleDay || isFamily ? (
+                <div>
+                  <label className={LABEL_CLS}>{t('date')}</label>
+                  <input
+                    type="date"
+                    value={form.startDate}
+                    onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: isSingleDay ? e.target.value : '' })}
+                    className={INPUT_CLS}
+                    min="2024-01-01"
+                    max="2027-12-31"
+                  />
+                  {isFamily && familyEndPreview && form.startDate && form.familySubType && (
+                    <p className="text-sm font-medium text-slate-700 mt-2 p-2.5 rounded-lg bg-indigo-50">
+                      {t('familyLeaveEndPreview')
+                        .replace('{0}', familyEndPreview.toLocaleDateString(locale))
+                        .replace('{1}', t('familyLeaveBusinessDaysLabel').replace('{0}', String(FAMILY_LEAVE_BUSINESS_DAYS[form.familySubType as FamilyLeaveSubType])))}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className={LABEL_CLS}>{t('startDate')} ~ {t('endDate')}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={form.startDate}
+                      onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                      className={`${INPUT_CLS} flex-1`}
+                      min="2024-01-01"
+                      max="2027-12-31"
+                    />
+                    <span className="text-slate-400 text-sm shrink-0">~</span>
+                    <input
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                      className={`${INPUT_CLS} flex-1`}
+                      min={form.startDate || '2024-01-01'}
+                      max="2027-12-31"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Reason */}
               {!isFamily && (
                 <div>
-                  <label className={LABEL_CLS}>{t('reason')} <span className="text-slate-300 normal-case font-normal">{t('optional')}</span></label>
-                  <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} placeholder={t('inputReason')} className={`${INPUT_CLS} resize-none`} />
+                  <label className={LABEL_CLS}>
+                    {t('reason')} <span className="text-slate-300 normal-case font-normal">{t('optional')}</span>
+                  </label>
+                  <textarea
+                    value={form.reason}
+                    onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                    rows={3}
+                    placeholder={t('inputReason')}
+                    className={`${INPUT_CLS} resize-none`}
+                  />
                 </div>
               )}
             </div>
 
-            {error && <div className="mt-4 rounded-xl bg-rose-50 border border-rose-100 p-3"><p className="text-sm text-rose-600">{error}</p></div>}
+            {error && (
+              <div className="mt-4 rounded-xl bg-rose-50 border border-rose-100 p-3">
+                <p className="text-sm text-rose-600">{error}</p>
+              </div>
+            )}
 
             <div className="flex gap-3 mt-6">
-              <button onClick={closeForm} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">{t('cancel')}</button>
+              <button
+                onClick={closeForm}
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                {t('cancel')}
+              </button>
               <button
                 onClick={() => submitLeave.mutate(
                   isQuarterDay
@@ -459,7 +413,7 @@ export default function LeavePage() {
                       ? { type: 'FAMILY', startDate: form.startDate, familySubType: form.familySubType || 'OWN_MARRIAGE' }
                       : { type: form.type, startDate: form.startDate, endDate: isHalfDay ? form.startDate : form.endDate, reason: form.reason || undefined }
                 )}
-                disabled={submitLeave.isPending || (isQuarterDay ? !form.startDate : isFamily ? !form.startDate || !form.familySubType || (startDate != null && !isBusinessDayLocal(startDate, holidayDateKeys)) : !form.startDate || (!isHalfDay && !form.endDate))}
+                disabled={!canSubmit}
                 className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity disabled:opacity-40"
               >
                 {submitLeave.isPending ? t('applying') : t('apply')}

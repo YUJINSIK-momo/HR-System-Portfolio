@@ -1,505 +1,291 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/authStore';
-import api from '@/lib/api';
-import { useTranslation } from '@/hooks/useTranslation';
+import { useState, useMemo } from 'react';
 
-/** 0.25 단위 반반차 등 반영 — DB는 Float */
-function parseLeaveDaysInput(raw: string): number | null {
-  const s = raw.trim().replace(',', '.');
-  if (s === '') return null;
-  const n = Number(s);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return n;
-}
+const MOCK_USERS = [
+  { id: 'm1', name: '김진식', email: 'admin@jinsik.com', position: '대표이사', department: '경영', role: 'SUPER_ADMIN', isActive: true, hireDate: '2020-01-15', leaveBalance: { totalDays: 15, usedDays: 3 } },
+  { id: 'm2', name: '박준혁', email: 'junhyuk@jinsik.com', position: '개발팀장', department: '개발', role: 'MANAGER', isActive: true, hireDate: '2021-03-15', leaveBalance: { totalDays: 15, usedDays: 7 } },
+  { id: 'm3', name: '최지은', email: 'jieun@jinsik.com', position: '프론트엔드 개발자', department: '개발', role: 'EMPLOYEE', isActive: true, hireDate: '2022-06-01', leaveBalance: { totalDays: 15, usedDays: 5 } },
+  { id: 'm4', name: '정민준', email: 'minjun@jinsik.com', position: '백엔드 개발자', department: '개발', role: 'EMPLOYEE', isActive: true, hireDate: '2023-02-01', leaveBalance: { totalDays: 15, usedDays: 2 } },
+  { id: 'm5', name: '윤채원', email: 'chaewon@jinsik.com', position: '마케터', department: '마케팅', role: 'EMPLOYEE', isActive: true, hireDate: '2022-09-01', leaveBalance: { totalDays: 15, usedDays: 8 } },
+  { id: 'm6', name: '황소연', email: 'soyeon@jinsik.com', position: '기획자', department: '기획', role: 'PLANNING', isActive: true, hireDate: '2021-11-01', leaveBalance: { totalDays: 15, usedDays: 4 } },
+  { id: 'm7', name: '이도현', email: 'dohyun@jinsik.com', position: 'CS 담당', department: 'CS', role: 'CS', isActive: true, hireDate: '2023-05-01', leaveBalance: { totalDays: 15, usedDays: 6 } },
+  { id: 'm8', name: '강하늘', email: 'haneul@jinsik.com', position: 'UI 디자이너', department: '디자인', role: 'DESIGNER', isActive: true, hireDate: '2022-04-01', leaveBalance: { totalDays: 15, usedDays: 3 } },
+];
 
-function formatLeaveDaysDisplay(n: number): string {
-  if (!Number.isFinite(n)) return '0';
-  const rounded = Math.round(n * 100) / 100;
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(rounded);
-}
+const ROLE_MAP: Record<string, string> = {
+  SUPER_ADMIN: '대표',
+  MANAGER: '관리자',
+  EMPLOYEE: '직원',
+  PLANNING: '기획',
+  CS: 'CS',
+  DESIGNER: '디자이너',
+  FOREIGN_FREELANCER: '프리랜서',
+};
+
+const DEPT_COLOR: Record<string, string> = {
+  '경영': 'bg-violet-100 text-violet-700',
+  '개발': 'bg-indigo-100 text-indigo-700',
+  '마케팅': 'bg-pink-100 text-pink-700',
+  '기획': 'bg-amber-100 text-amber-700',
+  'CS': 'bg-teal-100 text-teal-700',
+  '디자인': 'bg-rose-100 text-rose-700',
+};
+
+const AVATAR_GRAD = [
+  'from-indigo-400 to-violet-500',
+  'from-emerald-400 to-teal-500',
+  'from-amber-400 to-orange-500',
+  'from-rose-400 to-pink-500',
+  'from-cyan-400 to-blue-500',
+  'from-violet-400 to-purple-500',
+  'from-teal-400 to-emerald-500',
+  'from-orange-400 to-red-500',
+];
 
 export default function AdminUsersPage() {
-  const { t } = useTranslation();
-  const isSuperAdmin = useAuthStore((s) => s.user?.role === 'SUPER_ADMIN');
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ email: '', password: '', name: '', role: 'EMPLOYEE', position: '', phone: '', hireDate: '', leaveDays: '', useJapanese: false });
-  const [error, setError] = useState('');
-  const [resetId, setResetId] = useState<string | null>(null);
-  const [resetPassword, setResetPassword] = useState('');
-  const [leaveTarget, setLeaveTarget] = useState<{ id: string; name: string; currentDays: number } | null>(null);
-  const [leaveDays, setLeaveDays] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [editTarget, setEditTarget] = useState<{
-    id: string;
-    name: string;
-    position?: string;
-    phone?: string;
-    hireDate?: string;
-    useJapanese: boolean;
-    role?: string;
-  } | null>(null);
-  const [editForm, setEditForm] = useState({
-    name: '',
-    position: '',
-    phone: '',
-    hireDate: '',
-    useJapanese: false,
-    role: 'EMPLOYEE',
-  });
-  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [filterDept, setFilterDept] = useState('전체');
 
-  const updateUser = useMutation({
-    mutationFn: ({
-      id,
-      ...data
-    }: {
-      id: string;
-      name?: string;
-      position?: string;
-      phone?: string;
-      hireDate?: string | null;
-      useJapanese?: boolean;
-      role?: string;
-    }) => api.patch(`/users/${id}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setEditTarget(null);
+  const departments = ['전체', ...Array.from(new Set(MOCK_USERS.map(e => e.department)))];
+
+  const filtered = useMemo(() => {
+    return MOCK_USERS.filter(u => {
+      const matchSearch =
+        !search ||
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase()) ||
+        u.position.toLowerCase().includes(search.toLowerCase());
+      const matchDept = filterDept === '전체' || u.department === filterDept;
+      return matchSearch && matchDept;
+    });
+  }, [search, filterDept]);
+
+  const avgRemaining = Math.round(
+    MOCK_USERS.reduce((s, u) => s + (u.leaveBalance.totalDays - u.leaveBalance.usedDays), 0) /
+      MOCK_USERS.length
+  );
+
+  const statCards = [
+    {
+      label: '총 직원',
+      value: MOCK_USERS.length,
+      unit: '명',
+      gradient: 'from-indigo-500 to-indigo-700',
+      shadow: 'shadow-indigo-300',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
     },
-    onError: (err: any) => setError(err.response?.data?.message || '오류가 발생했습니다.'),
-  });
-
-  const { data: users } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => api.get('/users').then((r) => r.data),
-  });
-
-  const createUser = useMutation({
-    mutationFn: (data: typeof form) =>
-      api.post('/users', {
-        ...data,
-        hireDate: data.hireDate || undefined,
-        leaveDays: data.leaveDays ? parseLeaveDaysInput(data.leaveDays) ?? undefined : undefined,
-        useJapanese: data.useJapanese,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setShowCreate(false);
-      setForm({ email: '', password: '', name: '', role: 'EMPLOYEE', position: '', phone: '', hireDate: '', leaveDays: '', useJapanese: false });
+    {
+      label: '재직중',
+      value: MOCK_USERS.filter(e => e.isActive).length,
+      unit: '명',
+      gradient: 'from-emerald-500 to-teal-600',
+      shadow: 'shadow-emerald-300',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
     },
-    onError: (err: any) => setError(err.response?.data?.message || '오류가 발생했습니다.'),
-  });
-
-  const setLeave = useMutation({
-    mutationFn: ({ id, totalDays }: { id: string; totalDays: number }) =>
-      api.patch(`/users/${id}/leave-balance`, { totalDays }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setLeaveTarget(null);
-      setLeaveDays('');
+    {
+      label: '부서 수',
+      value: departments.length - 1,
+      unit: '개',
+      gradient: 'from-violet-500 to-purple-700',
+      shadow: 'shadow-violet-300',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
     },
-    onError: (err: any) => setError(err.response?.data?.message || '오류가 발생했습니다.'),
-  });
-
-  const deleteUser = useMutation({
-    mutationFn: (id: string) => api.delete(`/users/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setDeleteTarget(null);
+    {
+      label: '평균 잔여 연차',
+      value: avgRemaining,
+      unit: '일',
+      gradient: 'from-amber-500 to-orange-600',
+      shadow: 'shadow-amber-300',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
     },
-    onError: (err: any) => setError(err.response?.data?.message || '오류가 발생했습니다.'),
-  });
-
-  const resetPass = useMutation({
-    mutationFn: ({ id, newPassword }: { id: string; newPassword: string }) =>
-      api.post(`/users/${id}/reset-password`, { newPassword }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      setResetId(null);
-      setResetPassword('');
-    },
-    onError: (err: any) => setError(err.response?.data?.message || '오류가 발생했습니다.'),
-  });
+  ];
 
   return (
-    <div className="p-8">
+    <div className="min-h-full bg-slate-50 p-6 lg:p-8">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">{t('employeeMgmt')}</h2>
-        <button onClick={() => setShowCreate(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
-          {t('addEmployee')}
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">직원 관리</h2>
+          <p className="text-sm text-slate-500 mt-0.5">전체 직원 현황 및 계정을 관리합니다</p>
+        </div>
+        <button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          직원 추가
         </button>
       </div>
 
-      {/* Create modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">{t('addEmployee')}</h3>
-            <div className="space-y-3">
-              {[
-                { key: 'email', label: t('email'), type: 'email' },
-                { key: 'password', label: t('tempPassword'), type: 'password' },
-                { key: 'name', label: t('name'), type: 'text' },
-                { key: 'position', label: t('position'), type: 'text' },
-                { key: 'phone', label: t('phone'), type: 'text' },
-                { key: 'hireDate', label: t('hireDate'), type: 'date' },
-                { key: 'leaveDays', label: t('leaveDays'), type: 'number' },
-              ].map(({ key, label, type }) => (
-                <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {label}
-                          {(key === 'hireDate' || key === 'leaveDays') && <span className="text-gray-400 font-normal ml-1">{t('optional')}</span>}
-                  </label>
-                  {key === 'leaveDays' && <p className="text-xs text-gray-500 mt-0.5">{t('leaveDaysNote')}</p>}
-                  <input
-                    type={type}
-                    value={String((form as Record<string, unknown>)[key] ?? '')}
-                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                    placeholder={key === 'leaveDays' ? '0' : undefined}
-                    min={key === 'leaveDays' ? 0 : undefined}
-                    step={key === 'leaveDays' ? '0.25' : undefined}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {statCards.map(card => (
+          <div
+            key={card.label}
+            className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${card.gradient} p-5 shadow-lg ${card.shadow}`}
+          >
+            <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10" />
+            <div className="absolute right-3 bottom-3 h-12 w-12 rounded-full bg-white/5" />
+            <div className="relative z-10 flex flex-col gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white shadow-sm">
+                {card.icon}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white/80">{card.label}</p>
+                <div className="flex items-end gap-1 mt-0.5">
+                  <span className="text-3xl font-bold text-white leading-none">{card.value}</span>
+                  <span className="text-sm text-white/70 mb-0.5">{card.unit}</span>
                 </div>
-              ))}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('role')}</label>
-                <select
-                  value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="EMPLOYEE">{t('employee')}</option>
-                  <option value="PLANNING">{t('planning')}</option>
-                  <option value="MANAGER">{t('manager')}</option>
-                  <option value="SUPER_ADMIN">{t('rep')}</option>
-                  <option value="CS">{t('cs')}</option>
-                  <option value="DESIGNER">{t('designer')}</option>
-                  <option value="FOREIGN_FREELANCER">{t('foreignFreelancer')}</option>
-                </select>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="useJapanese"
-                  checked={form.useJapanese}
-                  onChange={(e) => setForm({ ...form, useJapanese: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="useJapanese" className="text-sm font-medium text-gray-700">{t('useJapanese')}</label>
-              </div>
-            </div>
-            {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
-            <div className="flex gap-2 mt-5">
-              <button onClick={() => { setShowCreate(false); setError(''); }} className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">{t('cancel')}</button>
-              <button onClick={() => createUser.mutate(form)} disabled={createUser.isPending} className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium">
-                {createUser.isPending ? '추가 중...' : t('add')}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {/* 편집 모달 */}
-      {editTarget && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">{t('editEmployee')}</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('name')}</label>
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('position')}</label>
-                <input
-                  type="text"
-                  value={editForm.position}
-                  onChange={(e) => setEditForm({ ...editForm, position: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
-                <input
-                  type="text"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('hireDate')}</label>
-                <input
-                  type="date"
-                  value={editForm.hireDate}
-                  onChange={(e) => setEditForm({ ...editForm, hireDate: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="editUseJapanese"
-                  checked={editForm.useJapanese}
-                  onChange={(e) => setEditForm({ ...editForm, useJapanese: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="editUseJapanese" className="text-sm font-medium text-gray-700">{t('useJapanese')}</label>
-              </div>
-              {isSuperAdmin && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('role')}</label>
-                  <select
-                    value={editForm.role}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="EMPLOYEE">{t('employee')}</option>
-                    <option value="PLANNING">{t('planning')}</option>
-                    <option value="MANAGER">{t('manager')}</option>
-                    <option value="SUPER_ADMIN">{t('rep')}</option>
-                    <option value="CS">{t('cs')}</option>
-                    <option value="DESIGNER">{t('designer')}</option>
-                    <option value="FOREIGN_FREELANCER">{t('foreignFreelancer')}</option>
-                  </select>
-                </div>
-              )}
-            </div>
-            {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
-            <div className="flex gap-2 mt-5">
-              <button onClick={() => { setEditTarget(null); setError(''); }} className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">{t('cancel')}</button>
-              <button
-                onClick={() =>
-                  updateUser.mutate({
-                    id: editTarget.id,
-                    name: editForm.name,
-                    position: editForm.position,
-                    phone: editForm.phone,
-                    hireDate: editForm.hireDate || null,
-                    useJapanese: editForm.useJapanese,
-                    ...(isSuperAdmin ? { role: editForm.role } : {}),
-                  })
-                }
-                disabled={updateUser.isPending}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium"
-              >
-                {updateUser.isPending ? t('saving') : t('confirm')}
-              </button>
-            </div>
-          </div>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1 sm:max-w-xs">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="이름, 이메일, 직책 검색..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+          />
         </div>
-      )}
-
-      {/* 연차 설정 모달 */}
-      {leaveTarget && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">
-              {t('leaveSetting')} - {leaveTarget.name}
-            </h3>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('leaveDays')}</label>
-            <p className="text-xs text-gray-500 mb-2">{t('leaveDaysFractionHint')}</p>
-            <input
-              type="number"
-              min={0}
-              step={0.25}
-              inputMode="decimal"
-              value={leaveDays}
-              onChange={(e) => setLeaveDays(e.target.value)}
-              placeholder={String(leaveTarget.currentDays)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setLeaveTarget(null); setError(''); setLeaveDays(''); }}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm"
-              >
-                {t('cancel')}
-              </button>
-              <button
-                onClick={() => {
-                  const parsed = leaveDays.trim() === '' ? leaveTarget.currentDays : parseLeaveDaysInput(leaveDays);
-                  if (parsed === null) return;
-                  setLeave.mutate({ id: leaveTarget.id, totalDays: parsed });
-                }}
-                disabled={
-                  setLeave.isPending ||
-                  (leaveDays.trim() !== '' && parseLeaveDaysInput(leaveDays) === null)
-                }
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium"
-              >
-                {setLeave.isPending ? t('saving') : t('set')}
-              </button>
-            </div>
-          </div>
+        <div className="flex gap-2 flex-wrap">
+          {departments.map(dept => (
+            <button
+              key={dept}
+              onClick={() => setFilterDept(dept)}
+              className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                filterDept === dept
+                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
+              }`}
+            >
+              {dept}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* 직원 계정 삭제 모달 */}
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">{t('delete')}</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              <strong>{deleteTarget.name}</strong> {t('deleteUserConfirm')}
-            </p>
-            <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg mb-5">
-              {t('deleteUserNote')}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setDeleteTarget(null); setError(''); }}
-                className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium"
-              >
-                {t('cancel')}
-              </button>
-              <button
-                onClick={() => deleteUser.mutate(deleteTarget.id)}
-                disabled={deleteUser.isPending}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-lg text-sm font-medium"
-              >
-                {deleteUser.isPending ? t('processing') : t('delete')}
-              </button>
-            </div>
-          </div>
+      {/* Table */}
+      <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-700">직원 목록</h3>
+          <span className="text-xs text-slate-400 tabular-nums">{filtered.length}명</span>
         </div>
-      )}
-
-      {/* Reset password modal */}
-      {resetId && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">{t('passwordReset')}</h3>
-            <input
-              type="password"
-              value={resetPassword}
-              onChange={(e) => setResetPassword(e.target.value)}
-              placeholder={t('newPassword')}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4"
-            />
-            {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-            <div className="flex gap-2">
-              <button onClick={() => { setResetId(null); setError(''); }} className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">{t('cancel')}</button>
-              <button onClick={() => resetPass.mutate({ id: resetId, newPassword: resetPassword })} className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-medium">{t('resetPasswordBtn')}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Users table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">{t('name')}</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">{t('email')}</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">{t('position')}</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">{t('leaveBalance')}</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">{t('role')}</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">{t('status')}</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500">{t('action')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {users?.map((u: any) => {
-              const lb = u.leaveBalance;
-              const total = lb?.totalDays ?? 0;
-              const used = lb?.usedDays ?? 0;
-              const remaining = total - used;
-              return (
-                <tr key={u.id}>
-                  <td className="px-6 py-3 font-medium text-gray-800">{u.name}</td>
-                  <td className="px-6 py-3 text-gray-600">{u.email}</td>
-                  <td className="px-6 py-3 text-gray-600">{u.position || '-'}</td>
-                  <td className="px-6 py-3 text-gray-600">
-                    <span title={`${t('total')} ${formatLeaveDaysDisplay(total)}${t('days')} · ${t('used')} ${formatLeaveDaysDisplay(used)}${t('days')}`}>
-                      {formatLeaveDaysDisplay(remaining)}{t('days')}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setLeaveTarget({ id: u.id, name: u.name, currentDays: total });
-                        setLeaveDays('');
-                        setError('');
-                      }}
-                      className="ml-1 text-xs text-blue-600 hover:underline"
-                    >
-                      {t('set')}
-                    </button>
-                  </td>
-                  <td className="px-6 py-3">
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                      {u.role === 'EMPLOYEE'
-                        ? t('employee')
-                        : u.role === 'PLANNING'
-                          ? t('planning')
-                          : u.role === 'MANAGER'
-                            ? t('manager')
-                            : u.role === 'SUPER_ADMIN'
-                              ? t('rep')
-                              : u.role === 'CS'
-                                ? t('cs')
-                                : u.role === 'DESIGNER'
-                                  ? t('designer')
-                                  : u.role === 'FOREIGN_FREELANCER'
-                                    ? t('foreignFreelancer')
-                                    : u.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3">
-                    {!u.isActive
-                      ? <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{t('inactive')}</span>
-                      : u.forcePasswordChange
-                        ? <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">{t('passwordChangeRequired')}</span>
-                        : <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{t('normal')}</span>
-                    }
-                  </td>
-                  <td className="px-6 py-3 space-x-2">
-                    <button
-                      onClick={() => {
-                        setEditTarget({
-                          id: u.id,
-                          name: u.name ?? '',
-                          position: u.position,
-                          phone: u.phone,
-                          hireDate: u.hireDate,
-                          useJapanese: (u.preferredLanguage ?? 'ko') === 'ja',
-                          role: u.role,
-                        });
-                        setEditForm({
-                          name: u.name ?? '',
-                          position: u.position ?? '',
-                          phone: u.phone ?? '',
-                          hireDate: u.hireDate ? new Date(u.hireDate).toISOString().slice(0, 10) : '',
-                          useJapanese: (u.preferredLanguage ?? 'ko') === 'ja',
-                          role: u.role ?? 'EMPLOYEE',
-                        });
-                        setError('');
-                      }}
-                      className="text-xs text-gray-600 hover:underline"
-                    >
-                      {t('edit')}
-                    </button>
-                    <button onClick={() => { setResetId(u.id); setError(''); }} className="text-xs text-gray-600 hover:underline">
-                      {t('passwordReset')}
-                    </button>
-                    {isSuperAdmin && (
-                      <button onClick={() => setDeleteTarget({ id: u.id, name: u.name })} className="text-xs text-red-600 hover:underline">
-                        {t('delete')}
-                      </button>
-                    )}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">직원</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">부서 / 직책</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">연차 현황</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">권한</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">입사일</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtered.map((u, idx) => {
+                const total = u.leaveBalance.totalDays;
+                const used = u.leaveBalance.usedDays;
+                const remaining = total - used;
+                const usedPct = Math.round((used / total) * 100);
+                return (
+                  <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-6 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${AVATAR_GRAD[idx % AVATAR_GRAD.length]} text-sm font-bold text-white shadow-sm`}
+                        >
+                          {u.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-800">{u.name}</p>
+                          <p className="text-xs text-slate-400">{u.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${DEPT_COLOR[u.department] ?? 'bg-slate-100 text-slate-600'}`}
+                      >
+                        {u.department}
+                      </span>
+                      <p className="text-xs text-slate-500 mt-0.5">{u.position}</p>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-20 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${usedPct >= 80 ? 'bg-rose-400' : usedPct >= 50 ? 'bg-amber-400' : 'bg-indigo-400'}`}
+                            style={{ width: `${usedPct}%` }}
+                          />
+                        </div>
+                        <span className="text-xs tabular-nums text-slate-600">
+                          <strong>{remaining}</strong>일 잔여
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 tabular-nums">
+                        {used}/{total}일 사용
+                      </p>
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100">
+                        {ROLE_MAP[u.role] ?? u.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3.5 text-sm text-slate-600 tabular-nums whitespace-nowrap">
+                      {u.hireDate.replace(/-/g, '.')}
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <button className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
+                          수정
+                        </button>
+                        <button className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors">
+                          연차 설정
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-400">
+                    검색 결과가 없습니다
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
