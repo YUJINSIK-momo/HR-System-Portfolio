@@ -100,12 +100,12 @@ export default function AdminLeavePage() {
     .reduce((sum, r) => sum + r.days, 0);
 
   return (
-    <div className="min-h-full bg-slate-50 p-6 lg:p-8">
+    <div className="min-h-full bg-notion-surface p-6 lg:p-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">휴가 신청 관리</h2>
-          <p className="text-sm text-slate-500 mt-0.5">직원 휴가 신청을 승인·반려하고 현황을 확인합니다</p>
+          <h2 className="text-xl font-semibold text-notion-charcoal tracking-tight">휴가 신청 관리</h2>
+          <p className="text-sm text-notion-steel mt-0.5">직원 휴가 신청을 승인·반려하고 현황을 확인합니다</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
@@ -118,7 +118,7 @@ export default function AdminLeavePage() {
             onClick={() => setActiveTab('requests')}
             className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               activeTab === 'requests'
-                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-200'
+                ? 'bg-violet-700 text-white shadow-md shadow-indigo-200'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
             }`}
           >
@@ -131,7 +131,7 @@ export default function AdminLeavePage() {
             onClick={() => setActiveTab('usage')}
             className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               activeTab === 'usage'
-                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-200'
+                ? 'bg-violet-700 text-white shadow-md shadow-indigo-200'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'
             }`}
           >
@@ -142,7 +142,7 @@ export default function AdminLeavePage() {
 
       {/* Summary stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shrink-0 shadow-sm">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -156,7 +156,7 @@ export default function AdminLeavePage() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shrink-0 shadow-sm">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -170,8 +170,8 @@ export default function AdminLeavePage() {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shrink-0 shadow-sm">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
+          <div className="p-2.5 rounded-xl bg-violet-700 text-white shrink-0 shadow-sm">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
@@ -251,7 +251,7 @@ export default function AdminLeavePage() {
             <select
               value={selectedYear}
               onChange={e => setSelectedYear(Number(e.target.value))}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent"
             >
               {[2027, 2026, 2025].map(y => (
                 <option key={y} value={y}>{y}년</option>
@@ -316,8 +316,8 @@ export default function AdminLeavePage() {
           )}
 
           {/* History */}
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
-            <h3 className="px-4 sm:px-6 py-4 text-base font-semibold text-slate-800 border-b border-slate-100 flex items-center gap-2">
+          <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
+            <h3 className="px-4 sm:px-6 py-4 text-\[15px\] font-semibold text-notion-charcoal tracking-tight border-b border-slate-100 flex items-center gap-2">
               <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -338,7 +338,7 @@ export default function AdminLeavePage() {
                           <span className="w-1.5 h-4 rounded bg-indigo-500" />
                           {monthLabel}
                         </h4>
-                        <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
+                        <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700">
                           {list.length}건
                         </span>
                       </div>
@@ -357,7 +357,7 @@ export default function AdminLeavePage() {
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {(list as any[]).map(r => (
-                              <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                              <tr key={r.id} className="hover:bg-notion-surface transition-colors">
                                 <td className="px-4 py-2.5 font-medium text-slate-800">
                                   {r.user?.profile?.name || r.user?.email}
                                 </td>
@@ -439,7 +439,7 @@ export default function AdminLeavePage() {
             <select
               value={selectedYear}
               onChange={e => setSelectedYear(Number(e.target.value))}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent"
             >
               {[2027, 2026, 2025].map(y => (
                 <option key={y} value={y}>{y}년</option>
@@ -447,7 +447,7 @@ export default function AdminLeavePage() {
             </select>
           </div>
 
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+          <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
             {/* Desktop */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
@@ -467,7 +467,7 @@ export default function AdminLeavePage() {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {employeeUsage.map(emp => (
-                    <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr key={emp.id} className="hover:bg-notion-surface transition-colors">
                       <td className="px-6 py-3 font-medium text-slate-800 sticky left-0 bg-white z-10">
                         {emp.name || emp.email}
                       </td>
@@ -479,7 +479,7 @@ export default function AdminLeavePage() {
                           </span>
                           <span>
                             <span className="text-slate-400">사용</span>{' '}
-                            <strong className="text-indigo-600">{emp.leaveBalance.usedDays}</strong>일
+                            <strong className="text-violet-700">{emp.leaveBalance.usedDays}</strong>일
                           </span>
                           <span>
                             <span className="text-slate-400">잔여</span>{' '}
@@ -531,7 +531,7 @@ export default function AdminLeavePage() {
                     </span>
                     <span>
                       <span className="text-slate-400">사용</span>{' '}
-                      <strong className="text-indigo-600">{emp.leaveBalance.usedDays}</strong>일
+                      <strong className="text-violet-700">{emp.leaveBalance.usedDays}</strong>일
                     </span>
                     <span>
                       <span className="text-slate-400">잔여</span>{' '}

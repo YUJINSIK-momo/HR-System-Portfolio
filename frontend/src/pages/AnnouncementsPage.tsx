@@ -22,9 +22,9 @@ function formatAnnouncementTableDate(iso: string): string {
   return `${y}.${mo}.${day} ${h}:${min}`;
 }
 
-const LABEL_CLS = 'block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5';
+const LABEL_CLS = 'block text-[11px] font-semibold text-notion-steel uppercase tracking-widest mb-1.5';
 const INPUT_CLS =
-  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition';
+  'w-full rounded-notion-btn border border-notion-hairline-strong bg-notion-canvas px-3 py-2.5 text-sm text-notion-charcoal placeholder:text-notion-muted focus:border-violet-600 focus:outline-none focus:ring-2 focus:ring-violet-600/20 transition-all';
 
 export default function AnnouncementsPage() {
   const { t } = useTranslation();
@@ -201,12 +201,12 @@ export default function AnnouncementsPage() {
   }, [modalMode, editExistingImages.length, pendingImages.length]);
 
   return (
-    <div className="min-h-full bg-slate-50 p-6 lg:p-8">
+    <div className="min-h-full bg-notion-surface p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('announcements')}</h1>
-          <p className="mt-1 text-sm text-slate-500">사내 공지사항을 확인하고 관리합니다</p>
+          <h1 className="text-xl font-semibold text-notion-charcoal tracking-tight tracking-tight">{t('announcements')}</h1>
+          <p className="mt-0.5 text-sm text-notion-steel">사내 공지사항을 확인하고 관리합니다</p>
         </div>
         {isAdmin && (
           <button
@@ -222,7 +222,7 @@ export default function AnnouncementsPage() {
               setPreviewCarouselIdx(0);
               setError('');
             }}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 transition hover:from-indigo-700 hover:to-violet-700"
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 transition hover:from-indigo-700 hover:to-violet-700"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -234,25 +234,25 @@ export default function AnnouncementsPage() {
 
       {/* Stats row */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">전체 공지</p>
           <p className="mt-2 text-3xl font-bold text-slate-900">{list.length}</p>
           <p className="mt-1 text-xs text-slate-500">등록된 공지사항</p>
         </div>
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">중요 공지</p>
           <p className="mt-2 text-3xl font-bold text-amber-600">{pinnedList.length}</p>
           <p className="mt-1 text-xs text-slate-500">상단 고정 중</p>
         </div>
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 hidden sm:block">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5 hidden sm:block">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">현재 페이지</p>
-          <p className="mt-2 text-3xl font-bold text-indigo-600">{page}<span className="text-lg text-slate-400"> / {totalPages}</span></p>
+          <p className="mt-2 text-3xl font-bold text-violet-700">{page}<span className="text-lg text-slate-400"> / {totalPages}</span></p>
           <p className="mt-1 text-xs text-slate-500">페이지 {page}</p>
         </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
         {list.length === 0 ? (
           <div className="py-20 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
@@ -298,7 +298,7 @@ export default function AnnouncementsPage() {
                         className="flex items-center gap-2 font-medium text-slate-900 hover:text-indigo-700 transition-colors"
                       >
                         {a.isPinned && (
-                          <span className="shrink-0 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 ring-1 ring-indigo-100">
+                          <span className="shrink-0 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-700 ring-1 ring-indigo-100">
                             공지
                           </span>
                         )}
@@ -503,7 +503,7 @@ export default function AnnouncementsPage() {
                   type="checkbox"
                   checked={createPinned}
                   onChange={(e) => setCreatePinned(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="h-4 w-4 rounded border-slate-300 text-violet-700 focus:ring-violet-600"
                 />
                 <span className="text-sm text-slate-700 font-medium">상단 고정 (중요 공지)</span>
               </label>
@@ -541,7 +541,7 @@ export default function AnnouncementsPage() {
                 disabled={
                   createMutation.isPending || updateMutation.isPending || !title.trim() || !content.trim() || uploadingImage
                 }
-                className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="flex-1 rounded-xl bg-violet-700 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 {createMutation.isPending || updateMutation.isPending ? '처리 중...' : '저장'}
               </button>

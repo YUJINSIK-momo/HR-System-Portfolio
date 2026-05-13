@@ -83,7 +83,7 @@ export default function AnnouncementDetailPage() {
     return (
       <div className="mx-auto max-w-4xl p-8">
         <p className="text-slate-600">{t('announcementNotFound')}</p>
-        <Link to="/announcements" className="mt-4 inline-block text-indigo-600 hover:underline">
+        <Link to="/announcements" className="mt-4 inline-block text-violet-700 hover:underline">
           {t('announcementBackToList')}
         </Link>
       </div>
@@ -102,7 +102,7 @@ export default function AnnouncementDetailPage() {
     return (
       <div className="mx-auto max-w-4xl p-8">
         <p className="text-slate-600">{t('announcementNotFound')}</p>
-        <Link to="/announcements" className="mt-4 inline-block text-indigo-600 hover:underline">
+        <Link to="/announcements" className="mt-4 inline-block text-violet-700 hover:underline">
           {t('announcementBackToList')}
         </Link>
       </div>
@@ -117,7 +117,7 @@ export default function AnnouncementDetailPage() {
       <div className="mb-6">
         <Link
           to="/announcements"
-          className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          className="inline-flex items-center gap-2 text-sm font-medium text-violet-700 hover:text-violet-900"
         >
           <span aria-hidden className="text-lg leading-none">
             ←
@@ -231,7 +231,7 @@ export default function AnnouncementDetailPage() {
                   }
                 }}
                 placeholder={t('inputComment')}
-                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-600/30"
               />
               <button
                 type="button"

@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const DEMO_EMPS = [
   { id: 'm1', name: '김진식', email: 'admin@jinsik.com' },
@@ -109,21 +108,23 @@ export default function AdminAttendancePage() {
     [records, startDate, endDate]
   );
 
-  const chartData = useMemo(() => {
+  const empStats = useMemo(() => {
     const [y, m] = selectedMonth.split('-').map(Number);
+    let workDays = 0;
     const daysInMonth = new Date(y, m, 0).getDate();
-    const byDate: Record<string, { count: number; date: string; label: string }> = {};
     for (let d = 1; d <= daysInMonth; d++) {
-      const key = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      byDate[key] = { date: key, count: 0, label: `${d}일` };
+      const day = new Date(y, m - 1, d).getDay();
+      if (day !== 0 && day !== 6) workDays++;
     }
-    filteredRecords.forEach(r => {
-      if (r.checkIn) {
-        const key = new Date(r.date).toISOString().slice(0, 10);
-        if (byDate[key]) byDate[key].count += 1;
-      }
+    return DEMO_EMPS.map(emp => {
+      const empRecords = filteredRecords.filter(r => r.userId === emp.id);
+      const present = empRecords.filter(r => r.checkIn !== null).length;
+      const late = empRecords.filter(r => r.status === 'LATE').length;
+      const absent = empRecords.filter(r => r.status === 'ABSENT').length;
+      const onLeave = empRecords.filter(r => r.status === 'ON_LEAVE').length;
+      const rate = workDays > 0 ? Math.round(((present + onLeave) / workDays) * 100) : 0;
+      return { ...emp, present, late, absent, onLeave, rate, workDays };
     });
-    return Object.values(byDate);
   }, [filteredRecords, selectedMonth]);
 
   const summary = useMemo(() => {
@@ -192,18 +193,18 @@ export default function AdminAttendancePage() {
   };
 
   return (
-    <div className="min-h-full bg-slate-50 p-6 lg:p-8">
+    <div className="min-h-full bg-notion-surface p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">근태 현황</h2>
-          <p className="text-sm text-slate-500 mt-0.5">직원별 월간 출퇴근 기록을 확인하고 관리합니다</p>
+          <h2 className="text-xl font-semibold text-notion-charcoal tracking-tight">근태 현황</h2>
+          <p className="text-sm text-notion-steel mt-0.5">직원별 월간 출퇴근 기록을 확인하고 관리합니다</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="month"
             value={selectedMonth}
             onChange={e => setSelectedMonth(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-40"
+            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent w-40"
           />
           <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +217,7 @@ export default function AdminAttendancePage() {
 
       {/* Pending corrections */}
       {pendingCorrections.length > 0 && (
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-6 mb-6">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-6 mb-6">
           <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <span className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-amber-50 px-1.5 text-xs font-bold text-amber-700 ring-1 ring-amber-100">
               {pendingCorrections.length}
@@ -284,7 +285,7 @@ export default function AdminAttendancePage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shrink-0 shadow-sm">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -298,7 +299,7 @@ export default function AdminAttendancePage() {
             </p>
           </div>
         </div>
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shrink-0 shadow-sm">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -312,7 +313,7 @@ export default function AdminAttendancePage() {
             </p>
           </div>
         </div>
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shrink-0 shadow-sm">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -328,51 +329,79 @@ export default function AdminAttendancePage() {
         </div>
       </div>
 
-      {/* Bar chart */}
-      <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 mb-6">
-        <h3 className="text-base font-semibold text-slate-800 mb-4 flex items-center gap-2">
-          <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      {/* Per-employee attendance summary table */}
+      <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden mb-6">
+        <div className="px-5 py-4 border-b border-notion-hairline flex items-center gap-2">
+          <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          일별 출근 현황
-        </h3>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 16, right: 16, left: 0, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} tickLine={false} axisLine={{ stroke: '#e2e8f0' }} width={28} />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                formatter={(value: any) => [`${value ?? 0}명`, '출근 인원']}
-              />
-              <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={32}>
-                {chartData.map((entry, index) => {
-                  const today = new Date();
-                  const entryDate = new Date(entry.date);
-                  const isToday = entryDate.toDateString() === today.toDateString();
-                  return (
-                    <Cell
-                      key={index}
-                      fill={entry.count > 0 ? (isToday ? '#4f46e5' : '#818cf8') : '#f1f5f9'}
-                      stroke={isToday && entry.count > 0 ? '#3730a3' : undefined}
-                      strokeWidth={isToday ? 1 : 0}
-                    />
-                  );
-                })}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <h3 className="text-base font-semibold text-slate-800">직원별 월간 근태 요약</h3>
+          <span className="ml-auto text-xs text-slate-400">영업일 기준 {empStats[0]?.workDays ?? 0}일</span>
         </div>
-        <div className="flex items-center justify-center gap-4 mt-2 text-xs text-slate-400 flex-wrap">
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-indigo-400" /> 출근 기록 있음
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">직원</th>
+                <th className="px-5 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">출근일</th>
+                <th className="px-5 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">지각</th>
+                <th className="px-5 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">결근</th>
+                <th className="px-5 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">휴가</th>
+                <th className="px-5 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">출근율</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {empStats.map(emp => (
+                <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold shrink-0">
+                        {emp.name[0]}
+                      </div>
+                      <span className="font-medium text-slate-800">{emp.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-center tabular-nums text-slate-700 font-medium">{emp.present}일</td>
+                  <td className="px-5 py-3 text-center tabular-nums">
+                    {emp.late > 0
+                      ? <span className="text-amber-600 font-semibold">{emp.late}회</span>
+                      : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-5 py-3 text-center tabular-nums">
+                    {emp.absent > 0
+                      ? <span className="text-rose-600 font-semibold">{emp.absent}일</span>
+                      : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-5 py-3 text-center tabular-nums">
+                    {emp.onLeave > 0
+                      ? <span className="text-teal-600 font-medium">{emp.onLeave}일</span>
+                      : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-bold min-w-[52px] ${
+                      emp.rate >= 90
+                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                        : emp.rate >= 70
+                        ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'
+                        : 'bg-rose-50 text-rose-700 ring-1 ring-rose-100'
+                    }`}>
+                      {emp.rate}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-5 flex-wrap">
+          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-emerald-100 ring-1 ring-emerald-200 inline-block" /> 90% 이상
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-slate-200" /> 출근 기록 없음
+          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-amber-100 ring-1 ring-amber-200 inline-block" /> 70–89%
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-indigo-600 ring-1 ring-indigo-700 ring-offset-1" /> 오늘
+          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-rose-100 ring-1 ring-rose-200 inline-block" /> 70% 미만
           </span>
         </div>
       </div>
@@ -419,7 +448,7 @@ export default function AdminAttendancePage() {
                   type="time"
                   value={editTarget.checkIn}
                   onChange={e => setEditTarget(p => p ? { ...p, checkIn: e.target.value } : null)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-600"
                 />
               </div>
               <div>
@@ -428,7 +457,7 @@ export default function AdminAttendancePage() {
                   type="time"
                   value={editTarget.checkOut}
                   onChange={e => setEditTarget(p => p ? { ...p, checkOut: e.target.value } : null)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-600"
                 />
               </div>
             </div>
@@ -447,7 +476,7 @@ export default function AdminAttendancePage() {
                     editTarget.checkOut ? `${editTarget.date}T${editTarget.checkOut}:00.000Z` : null
                   )
                 }
-                className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity"
+                className="flex-1 rounded-xl bg-violet-700 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity"
               >
                 저장
               </button>
@@ -457,7 +486,7 @@ export default function AdminAttendancePage() {
       )}
 
       {/* Detail records */}
-      <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
         <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h3 className="text-base font-semibold text-slate-800">상세 기록</h3>
           <div className="flex rounded-xl border border-slate-200 p-0.5 bg-slate-50">
@@ -493,7 +522,7 @@ export default function AdminAttendancePage() {
                   <div className={`px-4 py-2.5 flex items-center justify-between ${isTodayDate ? 'bg-indigo-50' : 'bg-slate-50'}`}>
                     <span className={`text-sm font-semibold ${isTodayDate ? 'text-indigo-800' : 'text-slate-800'}`}>
                       {dateObj.toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'short' })}
-                      {isTodayDate && <span className="ml-2 text-xs font-normal text-indigo-600">(오늘)</span>}
+                      {isTodayDate && <span className="ml-2 text-xs font-normal text-violet-700">(오늘)</span>}
                     </span>
                     <span className="text-xs font-medium text-slate-400 bg-white/80 px-2 py-0.5 rounded-full">
                       {(list as any[]).length}명
@@ -541,7 +570,7 @@ export default function AdminAttendancePage() {
                                   checkOut: r.checkOut ? toTimeOnly(r.checkOut) : '18:00',
                                 });
                               }}
-                              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                              className="text-xs font-medium text-violet-700 hover:text-violet-900 transition-colors"
                             >
                               시간 수정
                             </button>
@@ -621,7 +650,7 @@ export default function AdminAttendancePage() {
                                   checkOut: r.checkOut ? toTimeOnly(r.checkOut) : '18:00',
                                 });
                               }}
-                              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+                              className="text-xs font-medium text-violet-700 hover:text-violet-900 transition-colors"
                             >
                               시간 수정
                             </button>

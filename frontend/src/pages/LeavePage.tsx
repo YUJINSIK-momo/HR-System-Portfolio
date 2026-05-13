@@ -21,8 +21,8 @@ const defaultForm: {
   familySubType: FamilyLeaveSubType | '';
 } = { type: 'ANNUAL', startDate: '', endDate: '', reason: '', quarterDays: 0.25, familySubType: '' };
 
-const LABEL_CLS = 'block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide';
-const INPUT_CLS = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent';
+const LABEL_CLS = 'block text-[11px] font-semibold text-notion-steel mb-1.5 uppercase tracking-widest';
+const INPUT_CLS = 'w-full rounded-notion-btn border border-notion-hairline-strong bg-notion-canvas px-3 py-2.5 text-sm text-notion-charcoal focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent transition-all';
 
 
 export default function LeavePage() {
@@ -119,16 +119,16 @@ export default function LeavePage() {
   })();
 
   return (
-    <div className="min-h-full bg-slate-50 p-6 lg:p-8">
+    <div className="min-h-full bg-notion-surface p-6 lg:p-8">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('leave')}</h1>
-          <p className="mt-1 text-sm text-slate-500">휴가 신청 및 잔여 연차를 확인하세요</p>
+          <h1 className="text-xl font-semibold text-notion-charcoal tracking-tight">{t('leave')}</h1>
+          <p className="mt-0.5 text-sm text-notion-steel">휴가 신청 및 잔여 연차를 확인하세요</p>
         </div>
         <button
           onClick={handleOpenForm}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity self-start sm:self-auto"
+          className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity self-start sm:self-auto"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -150,7 +150,7 @@ export default function LeavePage() {
             ];
             const barColors = ['bg-indigo-500', 'bg-emerald-500', 'bg-amber-500'];
             return (
-              <div key={b?.id ?? `leave-balance-${i}`} className="rounded-2xl bg-white border border-slate-100 shadow-sm p-6">
+              <div key={b?.id ?? `leave-balance-${i}`} className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradients[i % gradients.length]} shadow-md`}>
                     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -174,13 +174,13 @@ export default function LeavePage() {
       )}
 
       {/* History */}
-      <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-800">{t('leaveHistory')}</h2>
+          <h2 className="text-\[15px\] font-semibold text-notion-charcoal tracking-tight">{t('leaveHistory')}</h2>
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-600"
           >
             {[new Date().getFullYear() + 1, new Date().getFullYear(), new Date().getFullYear() - 1].map((y) => (
               <option key={y} value={y}>{y}{t('year')}</option>
@@ -206,13 +206,13 @@ export default function LeavePage() {
                 <div key={monthKey} className="p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <h3 className="text-sm font-semibold text-slate-700">{monthLabel}</h3>
-                    <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">{list.length}건</span>
+                    <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700">{list.length}건</span>
                   </div>
                   {/* Desktop */}
                   <div className="hidden md:block rounded-xl overflow-hidden border border-slate-100">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-slate-50">
+                        <tr className="bg-notion-surface border-b border-notion-hairline">
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">구분</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">기간</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">일수</th>
@@ -222,7 +222,7 @@ export default function LeavePage() {
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {list.map((r: any) => (
-                          <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                          <tr key={r.id} className="hover:bg-notion-surface transition-colors">
                             <td className="px-4 py-3 font-medium text-slate-800">{leaveTypeDisplay(r)}</td>
                             <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                               {r.type === 'QUARTER_DAY'
@@ -414,7 +414,7 @@ export default function LeavePage() {
                       : { type: form.type, startDate: form.startDate, endDate: isHalfDay ? form.startDate : form.endDate, reason: form.reason || undefined }
                 )}
                 disabled={!canSubmit}
-                className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity disabled:opacity-40"
+                className="flex-1 rounded-xl bg-violet-700 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity disabled:opacity-40"
               >
                 {submitLeave.isPending ? t('applying') : t('apply')}
               </button>

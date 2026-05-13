@@ -116,14 +116,14 @@ export default function AdminUsersPage() {
   ];
 
   return (
-    <div className="min-h-full bg-slate-50 p-6 lg:p-8">
+    <div className="min-h-full bg-notion-surface p-6 lg:p-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">직원 관리</h2>
-          <p className="text-sm text-slate-500 mt-0.5">전체 직원 현황 및 계정을 관리합니다</p>
+          <h2 className="text-xl font-semibold text-notion-charcoal tracking-tight">직원 관리</h2>
+          <p className="text-sm text-notion-steel mt-0.5">전체 직원 현황 및 계정을 관리합니다</p>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity">
+        <button className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-200 hover:opacity-90 transition-opacity">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -172,7 +172,7 @@ export default function AdminUsersPage() {
             placeholder="이름, 이메일, 직책 검색..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+            className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent shadow-sm"
           />
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -183,7 +183,7 @@ export default function AdminUsersPage() {
               className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
                 filterDept === dept
                   ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-violet-700'
               }`}
             >
               {dept}
@@ -193,7 +193,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+      <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700">직원 목록</h3>
           <span className="text-xs text-slate-400 tabular-nums">{filtered.length}명</span>
@@ -217,7 +217,7 @@ export default function AdminUsersPage() {
                 const remaining = total - used;
                 const usedPct = Math.round((used / total) * 100);
                 return (
-                  <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
+                  <tr key={u.id} className="hover:bg-notion-surface transition-colors">
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-3">
                         <div
@@ -265,7 +265,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-3.5">
                       <div className="flex items-center gap-3">
-                        <button className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
+                        <button className="text-xs font-medium text-violet-700 hover:text-violet-900 transition-colors">
                           수정
                         </button>
                         <button className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors">

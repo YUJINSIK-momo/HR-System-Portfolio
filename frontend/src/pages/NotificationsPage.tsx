@@ -71,14 +71,14 @@ export default function NotificationsPage() {
   ];
 
   return (
-    <div className="min-h-full bg-slate-50 p-6 lg:p-8">
+    <div className="min-h-full bg-notion-surface p-6 lg:p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">{t('notifications')}</h1>
-        <p className="mt-1 text-sm text-slate-500">휴가 승인 현황, 일정 알림, 공지사항을 확인하세요</p>
+        <h1 className="text-xl font-semibold text-notion-charcoal tracking-tight">{t('notifications')}</h1>
+        <p className="mt-0.5 text-sm text-notion-steel">휴가 승인 현황, 일정 알림, 공지사항을 확인하세요</p>
       </div>
 
       {/* Tab bar */}
-      <div className="mb-6 flex gap-1 rounded-2xl bg-white border border-slate-100 shadow-sm p-1.5">
+      <div className="mb-6 flex gap-1 rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle p-1.5">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -86,13 +86,13 @@ export default function NotificationsPage() {
             onClick={() => setActiveTab(tab.key)}
             className={`flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
               activeTab === tab.key
-                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-200'
+                ? 'bg-violet-700 text-white shadow-md shadow-indigo-200'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
             {tab.label}
             {tab.badge > 0 && (
-              <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-xs font-bold ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-600'}`}>
+              <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-xs font-bold ${activeTab === tab.key ? 'bg-white/20 text-white' : 'bg-indigo-100 text-violet-700'}`}>
                 {tab.badge > 99 ? '99+' : tab.badge}
               </span>
             )}
@@ -102,7 +102,7 @@ export default function NotificationsPage() {
 
       {/* Leave tab */}
       {activeTab === 'leave' && !isForeignFreelancer && (
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <p className="text-sm text-slate-500">{t('leaveNotificationsDesc')}</p>
           </div>
@@ -119,7 +119,7 @@ export default function NotificationsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[900px]">
                 <thead>
-                  <tr className="bg-slate-50">
+                  <tr className="bg-notion-surface border-b border-notion-hairline">
                     {[t('employee'), t('type'), t('period'), t('days'), t('reason'), t('status'), t('date')].map((h) => (
                       <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{h}</th>
                     ))}
@@ -127,7 +127,7 @@ export default function NotificationsPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {requests.map((r: any) => (
-                    <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr key={r.id} className="hover:bg-notion-surface transition-colors">
                       <td className="px-5 py-3 font-medium text-slate-800">{r.user?.profile?.name || r.user?.email}</td>
                       <td className="px-5 py-3 text-slate-600">{leaveTypeDisplay(r, t, typeLabel)}</td>
                       <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
@@ -151,7 +151,7 @@ export default function NotificationsPage() {
 
       {/* Memo tab */}
       {activeTab === 'memo' && (
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100">
             <p className="text-sm text-slate-500">{t('memoRemindersDesc')}</p>
           </div>
@@ -167,9 +167,9 @@ export default function NotificationsPage() {
           ) : (
             <div className="divide-y divide-slate-50">
               {memoReminders.map((m: any) => (
-                <div key={m.id} className="flex items-start gap-4 px-6 py-4 hover:bg-slate-50/70 transition-colors">
+                <div key={m.id} className="flex items-start gap-4 px-6 py-4 hover:bg-notion-surface transition-colors">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50">
-                    <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-violet-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
@@ -186,10 +186,10 @@ export default function NotificationsPage() {
 
       {/* Announcement tab */}
       {activeTab === 'announcement' && (
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
+        <div className="rounded-notion-card bg-notion-canvas border border-notion-hairline shadow-notion-subtle overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
             <p className="text-sm text-slate-500">{t('announcementNotificationsDesc')}</p>
-            <NavLink to="/announcements" className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">전체 보기 →</NavLink>
+            <NavLink to="/announcements" className="text-xs font-semibold text-violet-700 hover:text-violet-900 transition-colors">전체 보기 →</NavLink>
           </div>
           {announcements.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
@@ -205,7 +205,7 @@ export default function NotificationsPage() {
               {announcements.slice(0, 10).map((a: any) => {
                 const isUnread = lastAnnouncementReadAt !== 0 && new Date(a.createdAt).getTime() > lastAnnouncementReadAt;
                 return (
-                  <NavLink key={a.id} to={`/announcements/${a.id}`} className="flex items-start gap-4 px-6 py-4 hover:bg-slate-50/70 transition-colors group">
+                  <NavLink key={a.id} to={`/announcements/${a.id}`} className="flex items-start gap-4 px-6 py-4 hover:bg-notion-surface transition-colors group">
                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${a.pinned ? 'bg-amber-50' : 'bg-slate-50'}`}>
                       {a.pinned
                         ? <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
@@ -213,7 +213,7 @@ export default function NotificationsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className={`text-sm font-semibold truncate group-hover:text-indigo-600 transition-colors ${isUnread ? 'text-slate-900' : 'text-slate-700'}`}>{a.title}</p>
+                        <p className={`text-sm font-semibold truncate group-hover:text-violet-700 transition-colors ${isUnread ? 'text-slate-900' : 'text-slate-700'}`}>{a.title}</p>
                         {isUnread && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" />}
                       </div>
                       <p className="text-xs text-slate-400">{new Date(a.createdAt).toLocaleDateString(locale)}</p>
